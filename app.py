@@ -275,13 +275,8 @@ def save_tasks():
 init_user_file()
 load_tasks()
 
-# ------------------- Main Header -------------------
-st.markdown("""
-<div class="main-header">
-    <h1>📊 Data Analyst Task Management Dashboard</h1>
-    <p>Showcasing analytical thinking through systematic task organization and data visualization</p>
-</div>
-""", unsafe_allow_html=True)
+# ------------------- Main Header (Only show before login) -------------------
+# This section is now moved to after login check
 
 # ------------------- Sidebar: Enhanced Task Creation -------------------
 with st.sidebar:
@@ -365,16 +360,12 @@ with st.sidebar:
         st.session_state["tasks"] = pd.DataFrame()
         st.rerun()
 
-# ------------------- Motivational Quote -------------------
-try:
-    selected_quote = random.choice(quotes)
-    st.markdown(f"""
-    <div class="quote-container">
-        <h3>{selected_quote}</h3>
-    </div>
-    """, unsafe_allow_html=True)
-except Exception as e:
-    st.error(f"Error displaying quote: {e}")
+# ------------------- Motivational Quote (Visible after login) -------------------
+st.markdown(f"""
+<div class="quote-container">
+    <h3>{random.choice(quotes)}</h3>
+</div>
+""", unsafe_allow_html=True)
 
 # ------------------- Enhanced Tabs -------------------
 tab1, tab2, tab3 = st.tabs(["📋 Kanban Board", "📊 Analytics Dashboard", "📈 Performance Insights"])
