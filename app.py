@@ -18,8 +18,6 @@ if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 if "task_message" not in st.session_state:
     st.session_state["task_message"] = ""
-if "rerun_flag" not in st.session_state:
-    st.session_state["rerun_flag"] = False
 if "auth_action" not in st.session_state:
     st.session_state["auth_action"] = "login"
 
@@ -128,7 +126,7 @@ if st.session_state["current_user"] is not None:
     def add_task(title, priority, tag, due_date):
         df = get_tasks()
         if ((df["title"].str.lower() == title.lower()) & (df["priority"] == priority)).any():
-            st.warning("⚠️ Task already exists with same name and priority.")
+            st.session_state["task_message"] = "⚠️ Task already exists with same name and priority."
             return
         task_id = str(datetime.now().timestamp()).replace(".","")
         new_task = pd.DataFrame([{
@@ -143,8 +141,7 @@ if st.session_state["current_user"] is not None:
         }])
         df = pd.concat([df,new_task],ignore_index=True)
         save_tasks(df)
-        st.success("✅ Task added")
-        st.session_state["rerun_flag"] = True
+        st.session_state["task_message"] = "✅ Task added"
 
     def update_status(task_id, new_status):
         df = get_tasks()
@@ -156,13 +153,13 @@ if st.session_state["current_user"] is not None:
         if new_status == "Done":
             df.at[idx,"completed_at"] = datetime.now().isoformat()
         save_tasks(df)
-        st.session_state["rerun_flag"] = True
+        st.session_state["task_message"] = f"✅ Task '{df.at[idx,'title']}' status updated to {new_status}"
 
     def delete_task(task_id):
         df = get_tasks()
         df = df[df["id"] != task_id]
         save_tasks(df)
-        st.session_state["rerun_flag"] = True
+        st.session_state["task_message"] = "🗑️ Task deleted"
 
     # ------------------- Initialize User File -------------------
     init_user_file()
@@ -180,12 +177,12 @@ if st.session_state["current_user"] is not None:
             if title.strip():
                 add_task(title, priority, tag.strip(), str(due_date))
             else:
-                st.warning("⚠️ Please enter a task title.")
+                st.session_state["task_message"] = "⚠️ Please enter a task title."
 
-    # ------------------- Safe rerun -------------------
-    if st.session_state.get("rerun_flag"):
-        st.session_state["rerun_flag"] = False
-        st.experimental_rerun()
+    # ------------------- Display Task Messages -------------------
+    if st.session_state.get("task_message"):
+        st.info(st.session_state["task_message"])
+        st.session_state["task_message"] = ""
 
     # ------------------- Motivational Quote -------------------
     st.markdown(
