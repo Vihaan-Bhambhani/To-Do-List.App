@@ -421,7 +421,7 @@ with main_col:
 # ------------------- Enhanced Task Board -------------------
 status_order = ["To Do", "In Progress", "Done"]
 status_colors = {"To Do": "#3498db", "In Progress": "#f39c12", "Done": "#27ae60"}
-status_emojis = {"To Do": "📝", "In Progress": "⚡", "Done": "✅"}
+status_emojis = {"To Do": "📝", "In Progress": "⏳", "Done": "✅"}
 
 with tab1:
     try:
