@@ -16,6 +16,8 @@ st.set_page_config(
 # ------------------- Session State -------------------
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
 if "task_message" not in st.session_state:
     st.session_state["task_message"] = ""
 if "rerun_needed" not in st.session_state:
@@ -62,8 +64,8 @@ quotes = [
     "🏆 Winners are ordinary people with extraordinary consistency.",
 ]
 
-# ------------------- Centered Login/Register -------------------
-if st.session_state["current_user"] is None:
+# ------------------- Login/Register Page -------------------
+if not st.session_state["logged_in"]:
     container = st.container()
     with container:
         st.markdown("<h1 style='text-align:center'>🧠 Login / Register</h1>", unsafe_allow_html=True)
@@ -87,8 +89,8 @@ if st.session_state["current_user"] is None:
                 df = pd.concat([df, pd.DataFrame([{"username": username.lower(), "password": hash_password(password)}])], ignore_index=True)
                 save_users(df)
                 st.session_state["current_user"] = username.lower()
+                st.session_state["logged_in"] = True
                 st.success(f"✅ User '{username}' registered and logged in!")
-                st.experimental_rerun()
             elif action == "Login":
                 result = validate_user(username, password)
                 if result == "not_registered":
@@ -97,11 +99,11 @@ if st.session_state["current_user"] is None:
                     st.warning("⚠️ Incorrect password.")
                 else:
                     st.session_state["current_user"] = username.lower()
+                    st.session_state["logged_in"] = True
                     st.success(f"✅ User '{username}' logged in!")
-                    st.experimental_rerun()
 
 # ------------------- Main App -------------------
-if st.session_state["current_user"] is not None:
+if st.session_state["logged_in"]:
     st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
     # ------------------- User Task Functions -------------------
@@ -204,3 +206,83 @@ if st.session_state["current_user"] is not None:
 
     # ------------------- Tabs -------------------
     tab1, tab2 = st.tabs(["📋 Task Board","📊 Analytics"])
+
+    # ------------------- Task Board -------------------
+    with tab1:
+        df = get_tasks()
+        if df.empty:
+            st.info("No tasks yet. Add some from the sidebar!")
+        else:
+            status_order = ["To Do","In Progress","Done"]
+            cols = st.columns(len(status_order))
+            for idx, status in enumerate(status_order):
+                with cols[idx]:
+                    st.markdown(f"### {status}")
+                    tasks = df[df["status"] == status]
+                    for _, row in tasks.iterrows():
+                        st.markdown(
+                            f"""
+                            <div style="background-color:{'#AED6F1' if status=='To Do' else '#F9E79F' if status=='In Progress' else '#ABEBC6'};
+                                        padding:10px;border-radius:8px;margin-bottom:10px;">
+                            <strong>{row['title']}</strong><br>
+                            🔢 Priority: {row['priority']}<br>
+                            🏷 Tag: {row['tag'] if row['tag'] else '-'}<br>
+                            📅 Due: {row['due_date']}
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                        col1, col2 = st.columns([2,1])
+                        with col1:
+                            new_status = st.selectbox(
+                                "Change Status",
+                                options=status_order,
+                                index=status_order.index(status),
+                                key=f"status_{row['id']}"
+                            )
+                            if new_status != row['status']:
+                                update_status(row['id'], new_status)
+                        with col2:
+                            if st.button("Delete", key=f"del_{row['id']}"):
+                                delete_task(row['id'])
+
+    # ------------------- Analytics -------------------
+    with tab2:
+        df = get_tasks()
+        if df.empty:
+            st.info("No tasks to analyze yet.")
+        else:
+            total = len(df)
+            completed = len(df[df["status"]=="Done"])
+            inprogress = len(df[df["status"]=="In Progress"])
+            todo = len(df[df["status"]=="To Do"])
+            avg_priority = df["priority"].mean() if not df.empty else 0
+
+            st.subheader("Task Metrics")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Tasks", total)
+            col2.metric("Completed", completed)
+            col3.metric("In Progress", inprogress)
+            col4.metric("Average Priority", f"{avg_priority:.2f}")
+
+            st.subheader("Task Status Distribution")
+            status_counts = df["status"].value_counts()
+            fig1, ax1 = plt.subplots()
+            ax1.pie(status_counts, labels=status_counts.index, autopct="%1.1f%%", startangle=90, colors=['#AED6F1','#F9E79F','#ABEBC6'])
+            ax1.axis('equal')
+            st.pyplot(fig1)
+
+            st.subheader("Tasks Completed Over Time")
+            if "completed_at" in df.columns:
+                df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
+                df_completed = df.dropna(subset=["completed_at"])
+                if not df_completed.empty:
+                    df_line = df_completed.groupby(df_completed["completed_at"].dt.date).size()
+                    st.line_chart(df_line)
+
+            st.download_button(
+                label="Download Tasks CSV",
+                data=df.to_csv(index=False),
+                file_name=f"tasks_{st.session_state['current_user']}.csv",
+                mime="text/csv"
+            )
