@@ -14,7 +14,7 @@ import numpy as np
 # ------------------- Page Config -------------------
 st.set_page_config(
     page_title="Data Analyst Portfolio - Task Management System",
-    page_icon="🧠",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -53,6 +53,16 @@ st.markdown("""
     .priority-high { border-left-color: #e74c3c; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
     .priority-medium { border-left-color: #f39c12; background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
     .priority-low { border-left-color: #27ae60; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+    .task-in-progress { 
+        border-left-color: #f39c12; 
+        background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); 
+        color: white;
+    }
+    .task-done { 
+        border-left-color: #27ae60; 
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); 
+        color: white;
+    }
     
     .sidebar-section {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -401,8 +411,17 @@ with tab1:
                     tasks = df[df["status"] == status].sort_values("priority")
                     for _, row in tasks.iterrows():
                         try:
-                            # Priority styling
-                            priority_class = "priority-high" if row['priority'] <= 2 else "priority-medium" if row['priority'] <= 3 else "priority-low"
+                            # Status-based styling with priority accents
+                            if status == "To Do":
+                                status_class = "priority-high" if row['priority'] <= 2 else "priority-medium" if row['priority'] <= 3 else "priority-low"
+                                text_color = "#2c3e50"
+                            elif status == "In Progress":
+                                status_class = "task-in-progress"
+                                text_color = "white"
+                            else:  # Done
+                                status_class = "task-done"
+                                text_color = "white"
+                            
                             priority_emoji = "🔴" if row['priority'] == 1 else "🟡" if row['priority'] == 2 else "🟢" if row['priority'] == 3 else "🔵" if row['priority'] == 4 else "⚫"
                             
                             task_tag = row['tag'] if pd.notna(row['tag']) and row['tag'] else 'General'
@@ -420,8 +439,8 @@ with tab1:
                                 urgency_text = "📅 No due date"
                             
                             st.markdown(f"""
-                            <div class="task-card {priority_class}">
-                                <h4 style="margin: 0; color: #2c3e50;">{row['title']}</h4>
+                            <div class="task-card {status_class}">
+                                <h4 style="margin: 0; color: {text_color};">{row['title']}</h4>
                                 <div style="margin: 0.5rem 0;">
                                     <span style="background: #34495e; color: white; padding: 0.2rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-right: 0.5rem;">
                                         {priority_emoji} P{row['priority']}
