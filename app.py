@@ -11,13 +11,11 @@ DB_FILE = "tasks.db"
 # DB helpers + migration
 # ------------------------------
 def get_conn():
-    # allow multiple streamlit threads to use sqlite in this simple app
     return sqlite3.connect(DB_FILE, check_same_thread=False)
 
 def ensure_schema():
     conn = get_conn()
     c = conn.cursor()
-    # ensure base table exists (may be older schema)
     c.execute("""
     CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,7 +23,6 @@ def ensure_schema():
         status TEXT
     )
     """)
-    # desired columns and their SQL add statements
     adds = {
         "priority": "ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 3",
         "tag": "ALTER TABLE tasks ADD COLUMN tag TEXT DEFAULT ''",
@@ -33,14 +30,12 @@ def ensure_schema():
         "created_at": "ALTER TABLE tasks ADD COLUMN created_at TEXT DEFAULT ''",
         "completed_at": "ALTER TABLE tasks ADD COLUMN completed_at TEXT DEFAULT ''"
     }
-    # get current columns
     existing = [row[1] for row in c.execute("PRAGMA table_info(tasks)").fetchall()]
     for col, sql in adds.items():
         if col not in existing:
             try:
                 c.execute(sql)
             except Exception:
-                # ignore if something odd happens; we'll still guard df access later
                 pass
     conn.commit()
     conn.close()
@@ -92,7 +87,6 @@ def fetch_tasks_df():
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM tasks", conn)
     conn.close()
-    # defensive: ensure expected columns exist in DataFrame
     expected_cols = ["id","title","status","priority","tag","due_date","created_at","completed_at"]
     for col in expected_cols:
         if col not in df.columns:
@@ -121,8 +115,15 @@ quote = random.choice(fun_quotes if group == "fun" else pro_quotes)
 
 st.set_page_config(page_title="📌 To-Do List (Data Analyst Demo)", layout="wide")
 st.markdown(
-    f"""<div style="background:#f0f2f6;padding:10px;border-radius:8px;text-align:center;font-size:18px;">
-        <b>{quote}</b>
+    f"""<div style="
+        background:#2c3e50;
+        color:white;
+        padding:15px;
+        border-radius:10px;
+        text-align:center;
+        font-size:18px;
+        font-weight:500;">
+        {quote}
     </div>""",
     unsafe_allow_html=True
 )
@@ -147,19 +148,8 @@ if st.sidebar.button("Add Task"):
 # Load data
 # ------------------------------
 df = fetch_tasks_df()
-
-# coerce datetimes safely
-if "created_at" in df.columns:
-    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
-else:
-    df["created_at"] = pd.NaT
-
-if "completed_at" in df.columns:
-    df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
-else:
-    df["completed_at"] = pd.NaT
-
-# ensure due_date parse
+df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
 df["due_date_parsed"] = pd.to_datetime(df["due_date"], errors="coerce")
 
 # ------------------------------
@@ -173,12 +163,10 @@ with tab_list:
     if df.empty:
         st.info("No tasks yet. Add some from the sidebar.")
     else:
-        # display as rows with inline status selector
         for _, row in df.iterrows():
             cols = st.columns([4,2,2,2])
             with cols[0]:
                 st.markdown(f"**{row['title']}**")
-                # nice small metadata line
                 meta = []
                 if not pd.isna(row['priority']): meta.append(f"Priority: {int(row['priority'])}")
                 if row['tag'] and not pd.isna(row['tag']): meta.append(f"Category: {row['tag']}")
@@ -195,23 +183,25 @@ with tab_list:
                         key=f"status_{row['id']}"
                     )
                 except Exception:
-                    # fallback if status is weird
                     new_status = st.selectbox("", ["To Do","In Progress","Done"], index=0, key=f"status_{row['id']}")
                 if new_status != row['status']:
                     update_task_status(row['id'], new_status)
+                    if new_status == "Done":
+                        st.balloons()  # 🎉 confetti animation
                     st.rerun()
             with cols[2]:
-                # small delete button (confirm via simple UI)
                 if st.button("🗑 Delete", key=f"del_{row['id']}"):
-                    conn = get_conn()
-                    c = conn.cursor()
-                    c.execute("DELETE FROM tasks WHERE id=?", (int(row['id']),))
-                    conn.commit()
-                    conn.close()
-                    st.success("Deleted")
-                    st.rerun()
+                    if pd.notna(row['id']):
+                        conn = get_conn()
+                        c = conn.cursor()
+                        c.execute("DELETE FROM tasks WHERE id=?", (int(row['id']),))
+                        conn.commit()
+                        conn.close()
+                        st.success("Deleted")
+                        st.rerun()
+                    else:
+                        st.error("⚠️ Could not delete this task (invalid ID).")
             with cols[3]:
-                # placeholder for details or actions
                 st.write("")
 
 # -------- Kanban --------
@@ -230,24 +220,21 @@ with tab_kanban:
                 if subset.empty:
                     st.info("—")
                 for _, row in subset.iterrows():
-                    # friendly due formatting
                     due = "-"
                     if not pd.isna(row["due_date_parsed"]):
                         due = row["due_date_parsed"].strftime("%b %d, %Y")
-                    # optional category
                     category_line = f"<div style='margin-top:6px'>📂 <b>Category:</b> {row['tag']}</div>" if row['tag'] and not pd.isna(row['tag']) and row['tag']!="" else ""
-                    # priority accent color (red->green mapping)
                     pr = int(row['priority']) if not pd.isna(row['priority']) else 3
                     if pr >= 5:
-                        pr_color = "#b91c1c"  # dark red
+                        pr_color = "#b91c1c"
                     elif pr >= 4:
-                        pr_color = "#f97316"  # orange
+                        pr_color = "#f97316"
                     elif pr == 3:
-                        pr_color = "#f59e0b"  # amber
+                        pr_color = "#f59e0b"
                     elif pr == 2:
-                        pr_color = "#10b981"  # green
+                        pr_color = "#10b981"
                     else:
-                        pr_color = "#059669"  # darker green
+                        pr_color = "#059669"
 
                     st.markdown(
                         f"""
@@ -282,12 +269,10 @@ with tab_analytics:
         st.progress(progress)
         st.write(f"{done} of {total} tasks completed ({progress*100:.1f}%)")
 
-        # avg completion time
         completed = df.dropna(subset=["completed_at"])
         if not completed.empty:
             completed["completed_at"] = pd.to_datetime(completed["completed_at"], errors="coerce")
-            if "created_at" in completed.columns:
-                completed["created_at"] = pd.to_datetime(completed["created_at"], errors="coerce")
+            completed["created_at"] = pd.to_datetime(completed["created_at"], errors="coerce")
             completed["duration_days"] = (completed["completed_at"] - completed["created_at"]).dt.total_seconds() / 86400
             avg_days = completed["duration_days"].mean()
             st.write(f"⏱ Average time to complete tasks: {avg_days:.2f} days")
@@ -306,7 +291,6 @@ with tab_analytics:
             ax.set_xlabel("Priority (1=Low,5=High)")
             ax.set_ylabel("Count")
             st.pyplot(fig)
-            # insight
             top_pr = pr_counts.idxmax()
             st.info(f"Insight: Most tasks are at priority {top_pr}.")
 
@@ -326,7 +310,6 @@ with tab_analytics:
                 st.write("No categories assigned yet.")
 
         st.subheader("📅 Weekly Completion Trend")
-        # group by ISO week of completed_at or created_at fallback
         df["completed_at_dt"] = pd.to_datetime(df["completed_at"], errors="coerce")
         df["week"] = df["completed_at_dt"].dt.isocalendar().week
         weekly = df[df["status"]=="Done"].groupby("week").size()
@@ -339,9 +322,3 @@ with tab_analytics:
             st.info("Track weekly completion to measure productivity trends.")
         else:
             st.write("No completed tasks yet.")
-
-# close DB conn used earlier (if any)
-try:
-    conn.close()
-except Exception:
-    pass
