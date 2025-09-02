@@ -162,14 +162,16 @@ with tab2:
                         except:
                             due = row["due_date"]
 
-                    # build task card
+                    # build task card with dark text
                     st.markdown(
                         f"""
-                        <div style="background-color:{colors[status]}; 
-                                    padding:12px; 
-                                    border-radius:10px; 
-                                    margin-bottom:10px;
-                                    box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                        <div style="
+                            background-color:{colors[status]};
+                            color:#000000; 
+                            padding:12px; 
+                            border-radius:10px; 
+                            margin-bottom:10px;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
                             <b>✅ {row['title']}</b><br>
                             🔢 Priority: <b>{row['priority']}</b><br>
                             🏷 {row['tag'] if row['tag'] else '-'}<br>
@@ -178,6 +180,7 @@ with tab2:
                         """,
                         unsafe_allow_html=True
                     )
+
 
 
 # --- Analytics View ---
