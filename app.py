@@ -1,143 +1,113 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import uuid
 import random
+import matplotlib.pyplot as plt
 from datetime import datetime
 
-# --------------------------
-# DB SETUP
-# --------------------------
-DB_FILE = "tasks.db"
+# --- Page Config ---
+st.set_page_config(page_title="📌 To-Do List", layout="wide")
 
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS tasks (
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        status TEXT,
-        priority INTEGER,
-        tag TEXT,
-        created_at TEXT,
-        due_date TEXT
-    )
-    """)
-    # schema migration (add missing cols if old DB exists)
-    existing_cols = [row[1] for row in c.execute("PRAGMA table_info(tasks)")]
-    if "tag" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN tag TEXT")
-    if "priority" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 3")
-    if "due_date" not in existing_cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT")
+# --- Database Setup ---
+conn = sqlite3.connect("tasks.db")
+c = conn.cursor()
+c.execute("""
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    status TEXT,
+    priority INTEGER,
+    tag TEXT,
+    due_date TEXT,
+    created_at TEXT,
+    completed_at TEXT
+)
+""")
+c.execute("""
+CREATE TABLE IF NOT EXISTS experiments (
+    user_group TEXT
+)
+""")
+conn.commit()
+
+# --- Assign User Group for A/B Test ---
+c.execute("SELECT user_group FROM experiments LIMIT 1")
+row = c.fetchone()
+if row is None:
+    group = random.choice(["fun", "pro"])
+    c.execute("INSERT INTO experiments (user_group) VALUES (?)", (group,))
     conn.commit()
-    conn.close()
+else:
+    group = row[0]
 
-def add_task(title, priority, tag, due_date):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("INSERT INTO tasks VALUES (?,?,?,?,?,?,?)", (
-        str(uuid.uuid4()),
-        title,
-        "To Do",
-        priority,
-        tag,
-        datetime.now().strftime("%Y-%m-%d %H:%M"),
-        due_date
-    ))
-    conn.commit()
-    conn.close()
-
-def get_tasks():
-    conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql_query("SELECT * FROM tasks", conn)
-    conn.close()
-    return df
-
-def update_status(task_id, status):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("UPDATE tasks SET status=? WHERE id=?", (status, task_id))
-    conn.commit()
-    conn.close()
-
-# --------------------------
-# APP UI
-# --------------------------
-st.set_page_config(page_title="📋 To-Do List", layout="wide")
-
-st.title("📋 To-Do List App")
-
-# --- Motivation Quotes ---
-QUOTES = [
-    "🌟 Believe you can and you're halfway there.",
-    "🚀 Small progress each day adds up to big results.",
-    "🔥 Push yourself, because no one else is going to do it for you.",
-    "💡 Great things never come from comfort zones.",
-    "✅ Don’t watch the clock; do what it does. Keep going.",
-    "🏆 Success is the sum of small efforts repeated day in and day out.",
-    "🌱 Every accomplishment starts with the decision to try."
+# --- Motivational Quotes (A/B test) ---
+fun_quotes = [
+    "🚀 Start where you are. Use what you have. Do what you can.",
+    "✅ Small steps every day lead to big results.",
+    "🔥 Productivity is never an accident. It is the result of commitment."
 ]
-st.markdown("---")
-st.info(f"💬 **Motivation for Today:** {random.choice(QUOTES)}")
-st.markdown("---")
+pro_quotes = [
+    "Discipline is the bridge between goals and accomplishment.",
+    "Productivity is about working smarter, not harder.",
+    "Success comes to those who prioritize effectively."
+]
+quote = random.choice(fun_quotes if group == "fun" else pro_quotes)
 
-init_db()
+st.markdown(
+    f"""
+    <div style="background-color:#f0f2f6; padding:10px; border-radius:8px; text-align:center; font-size:18px;">
+        <b>{quote}</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# --------------------------
-# SIDEBAR: ADD NEW TASK
-# --------------------------
-st.sidebar.header("➕ Add a new task")
-with st.sidebar.form("new_task_form", clear_on_submit=True):
-    title = st.text_input("Task")
-    priority = st.slider("Priority (1 = Low, 5 = High)", 1, 5, 3)
-    tag = st.text_input("Tag (optional)")
-    due_date = st.date_input("Due Date", value=None)
-    submitted = st.form_submit_button("Add Task")
-    if submitted and title.strip():
-        add_task(title.strip(), priority, tag, due_date.strftime("%Y-%m-%d") if due_date else "")
+# --- Sidebar Task Input ---
+st.sidebar.header("➕ Add New Task")
+title = st.sidebar.text_input("Task Title")
+priority = st.sidebar.selectbox("Priority (1 = Low, 5 = High)", [1, 2, 3, 4, 5])
+tag = st.sidebar.text_input("Category")
+due_date = st.sidebar.date_input("Due Date")
+if st.sidebar.button("Add Task"):
+    if title:
+        c.execute(
+            "INSERT INTO tasks (title, status, priority, tag, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (title, "To Do", priority, tag, str(due_date), datetime.now().isoformat())
+        )
+        conn.commit()
         st.sidebar.success("Task added!")
-        st.rerun()
 
-# --------------------------
-# MAIN TABS
-# --------------------------
-df = get_tasks()
-tab1, tab2, tab3 = st.tabs(["📋 List View", "🗂 Kanban Board", "📊 Analytics"])
+# --- Load Data ---
+df = pd.read_sql("SELECT * FROM tasks", conn)
 
-# --- List View ---
+# --- Tabs ---
+tab1, tab2, tab3 = st.tabs(["📋 Task List", "🗂 Kanban Board", "📊 Analytics"])
+
+# --- Task List ---
 with tab1:
-    st.header("📋 Task List")
+    st.header("📋 All Tasks")
     if df.empty:
-        st.info("No tasks yet.")
+        st.info("No tasks yet. Add some from the sidebar ➕")
     else:
-        expected_cols = ["id","title","status","priority","tag","due_date"]
-        for col in expected_cols:
-            if col not in df.columns:
-                df[col] = ""
         for _, row in df.iterrows():
-            col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+            col1, col2 = st.columns([4, 1])
             with col1:
-                st.markdown(f"**{row['title']}**")
+                st.write(f"**{row['title']}** (Priority {row['priority']}) — {row['status']}")
             with col2:
                 new_status = st.selectbox(
-                    "Status",
+                    "Update Status",
                     ["To Do", "In Progress", "Done"],
                     index=["To Do", "In Progress", "Done"].index(row["status"]),
                     key=f"status_{row['id']}"
                 )
                 if new_status != row["status"]:
-                    update_status(row["id"], new_status)
-                    st.rerun()
-            with col3:
-                st.markdown(f"🔢 Priority: **{row['priority']}**")
-            with col4:
-                st.markdown(f"🏷 {row['tag'] if row['tag'] else '-'}")
+                    completed_at = datetime.now().isoformat() if new_status == "Done" else None
+                    c.execute("UPDATE tasks SET status=?, completed_at=? WHERE id=?",
+                              (new_status, completed_at, row["id"]))
+                    conn.commit()
+                    st.experimental_set_query_params()  # refresh
 
-# --- Kanban View ---
-# --- Kanban View ---
+# --- Kanban Board ---
 with tab2:
     st.header("🗂 Kanban Board")
     if df.empty:
@@ -145,16 +115,11 @@ with tab2:
     else:
         cols = st.columns(3)
         statuses = ["To Do", "In Progress", "Done"]
-        colors = {
-            "To Do": "#FFF3CD",          # soft yellow
-            "In Progress": "#CCE5FF",    # soft blue
-            "Done": "#D4EDDA"            # soft green
-        }
+        colors = {"To Do": "#FFF3CD", "In Progress": "#CCE5FF", "Done": "#D4EDDA"}
         for i, status in enumerate(statuses):
             with cols[i]:
                 st.subheader(status)
                 for _, row in df[df["status"] == status].iterrows():
-                    # format due date
                     # format due date
                     due = "-"
                     if row["due_date"]:
@@ -162,10 +127,8 @@ with tab2:
                             due = pd.to_datetime(row["due_date"]).strftime("%b %d, %Y")
                         except:
                             due = row["due_date"]
-                    
-                    # optional category line (only if tag exists)
+                    # optional category
                     category_line = f"📂 Category: {row['tag']}<br>" if row["tag"] else ""
-                    
                     # build task card
                     st.markdown(
                         f"""
@@ -185,23 +148,74 @@ with tab2:
                         unsafe_allow_html=True
                     )
 
-
-# --- Analytics View ---
+# --- Analytics ---
 with tab3:
-    st.header("📊 Analytics")
+    st.header("📊 Task Insights")
     if df.empty:
-        st.info("No data to analyze yet.")
+        st.info("No data yet. Add tasks to see analytics.")
     else:
-        total = len(df)
-        done = len(df[df["status"]=="Done"])
-        st.metric("✅ Completion Rate", f"{(done/total*100):.1f}%")
+        # Completion progress
+        total_tasks = len(df)
+        done_tasks = len(df[df["status"] == "Done"])
+        progress = done_tasks / total_tasks if total_tasks > 0 else 0
+        st.subheader("✅ Overall Progress")
+        st.progress(progress)
+        st.write(f"{done_tasks} of {total_tasks} tasks completed")
 
-        st.subheader("Task Status Distribution")
-        st.bar_chart(df["status"].value_counts())
+        # Average completion time
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
+        completed = df.dropna(subset=["completed_at"])
+        if not completed.empty:
+            avg_time = (completed["completed_at"] - completed["created_at"]).mean()
+            st.write(f"⏱ Avg. completion time: {avg_time.days} days")
+        else:
+            st.write("⏱ No completed tasks yet to calculate average time.")
 
-        st.subheader("Tasks by Priority")
-        st.bar_chart(df["priority"].value_counts().sort_index())
+        col1, col2 = st.columns(2)
 
-        st.subheader("Tasks by Tag")
-        tag_counts = df["tag"].fillna("Untagged").replace("", "Untagged").value_counts()
-        st.bar_chart(tag_counts)
+        # Tasks by priority
+        with col1:
+            st.subheader("🔢 Tasks by Priority")
+            sql_q = "SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority"
+            st.caption(f"SQL: {sql_q}")
+            fig, ax = plt.subplots()
+            df["priority"].value_counts().sort_index().plot(
+                kind="bar", ax=ax, color="skyblue", edgecolor="black"
+            )
+            ax.set_xlabel("Priority")
+            ax.set_ylabel("Count")
+            st.pyplot(fig)
+            st.info("Insight: Most of your tasks fall into mid-level priority. Consider balancing workload.")
+
+        # Tasks by category
+        with col2:
+            st.subheader("📂 Tasks by Category")
+            sql_q = "SELECT tag, COUNT(*) as count FROM tasks GROUP BY tag"
+            st.caption(f"SQL: {sql_q}")
+            if df["tag"].notna().any():
+                fig, ax = plt.subplots()
+                df["tag"].value_counts().plot(
+                    kind="bar", ax=ax, color="lightgreen", edgecolor="black"
+                )
+                ax.set_ylabel("Count")
+                st.pyplot(fig)
+                st.info("Insight: Your most common category is where you’re spending most effort.")
+            else:
+                st.write("No categories assigned yet.")
+
+        # Weekly completion trend
+        st.subheader("📅 Weekly Completion Trend")
+        sql_q = "SELECT due_date, COUNT(*) FROM tasks WHERE status='Done' GROUP BY strftime('%W', due_date)"
+        st.caption(f"SQL: {sql_q}")
+        df["due_date"] = pd.to_datetime(df["due_date"], errors="coerce")
+        trend = df[df["status"] == "Done"].groupby(df["due_date"].dt.isocalendar().week).size()
+        if not trend.empty:
+            fig, ax = plt.subplots()
+            trend.plot(kind="line", marker="o", ax=ax)
+            ax.set_xlabel("Week")
+            ax.set_ylabel("Completed Tasks")
+            st.pyplot(fig)
+            st.info("Insight: Track how your weekly productivity is trending over time.")
+        else:
+            st.write("No completed tasks yet.")
