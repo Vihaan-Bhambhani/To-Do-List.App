@@ -12,7 +12,7 @@ import hashlib
 st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
 # --------------------------------------------------
-# Session State for Messages and Rerun Flag
+# Session State Setup
 # --------------------------------------------------
 if "task_message" not in st.session_state:
     st.session_state["task_message"] = ""
@@ -24,7 +24,7 @@ if "auth_action" not in st.session_state:
     st.session_state["auth_action"] = "login"
 
 # --------------------------------------------------
-# Utility Functions
+# Users CSV Functions
 # --------------------------------------------------
 USERS_FILE = "users.csv"
 
@@ -67,20 +67,11 @@ quotes = [
     "⏳ Don’t wait for inspiration, create it.",
     "🏆 Winners are ordinary people with extraordinary consistency.",
 ]
-st.markdown(
-    f"""
-    <div style="background-color:#2E86C1;padding:15px;border-radius:10px;margin-bottom:20px;">
-        <h3 style="color:white;text-align:center;font-weight:600;font-size:20px;">{random.choice(quotes)}</h3>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 # --------------------------------------------------
-# Sidebar Authentication
+# Authentication Sidebar
 # --------------------------------------------------
-st.sidebar.header("🔑 User Login / Registration")
-
+st.sidebar.header("🔑 Login / Register")
 auth_action = st.sidebar.radio("Action:", ["Login", "Register"])
 st.session_state["auth_action"] = auth_action
 
@@ -119,17 +110,17 @@ elif auth_action == "Login":
                 st.session_state["task_message"] = f"✅ User '{username}' logged in."
                 st.session_state["rerun_flag"] = True
 
-# Show message if exists
+# Show auth messages
 if st.session_state["task_message"]:
     st.info(st.session_state["task_message"])
 
 # --------------------------------------------------
-# Only show tasks if logged in
+# Only show main app if user is logged in
 # --------------------------------------------------
 if st.session_state["current_user"] is not None:
 
     # --------------------------------------------------
-    # File/DB Functions per User
+    # User Tasks File
     # --------------------------------------------------
     def user_file():
         return f"tasks_{st.session_state['current_user']}.csv"
@@ -152,7 +143,6 @@ if st.session_state["current_user"] is not None:
     def add_task(title, priority, tag, due_date):
         try:
             df = get_tasks()
-            # Duplicate check
             if ((df["title"].str.lower() == title.lower()) & (df["priority"] == priority)).any():
                 st.session_state["task_message"] = "⚠️ Task already exists with same name and priority."
                 return
@@ -198,14 +188,10 @@ if st.session_state["current_user"] is not None:
         except Exception as e:
             st.session_state["task_message"] = f"⚠️ Could not delete task: {e}"
 
-    # --------------------------------------------------
     # Initialize user tasks file
-    # --------------------------------------------------
     init_user_file()
 
-    # --------------------------------------------------
     # Sidebar Add Task
-    # --------------------------------------------------
     st.sidebar.header("➕ Add New Task")
     with st.sidebar.form("task_form"):
         title = st.text_input("Task Title")
@@ -219,14 +205,10 @@ if st.session_state["current_user"] is not None:
             else:
                 st.session_state["task_message"] = "⚠️ Please enter a task title."
 
-    # --------------------------------------------------
-    # Tabs
-    # --------------------------------------------------
+    # ---------------------- Tabs ----------------------
     tab1, tab2 = st.tabs(["📋 Task Board","📊 Analytics"])
 
-    # --------------------------------------------------
-    # Task Board
-    # --------------------------------------------------
+    # ---------------- Task Board ----------------
     with tab1:
         st.header(f"📋 Tasks for {st.session_state['current_user']}")
         df = get_tasks()
@@ -261,55 +243,4 @@ if st.session_state["current_user"] is not None:
                     with col3:
                         if st.button("🗑",key=f"del_{row['id']}"):
                             delete_task(row["id"])
-                            st.session_state["task_message"] = f"Task '{row['title']}' deleted successfully ✅"
-
-    # --------------------------------------------------
-    # Analytics
-    # --------------------------------------------------
-  # --------------------------------------------------
-# Analytics
-# --------------------------------------------------
-with tab2:
-    st.header("📊 Task Analytics")
-    df = get_tasks()
-    if df.empty:
-        st.info("No data to analyze yet. Add tasks first!")
-    else:
-        try:
-            df["created_at"] = pd.to_datetime(df["created_at"],errors="coerce")
-            df["completed_at"] = pd.to_datetime(df["completed_at"],errors="coerce")
-
-            # Metrics
-            total = len(df)
-            done = len(df[df["status"]=="Done"])
-            in_progress = len(df[df["status"]=="In Progress"])
-            todo = len(df[df["status"]=="To Do"])
-
-            col1,col2,col3,col4 = st.columns(4)
-            col1.metric("Total Tasks",total)
-            col2.metric("✅ Done",done)
-            col3.metric("🚧 In Progress",in_progress)
-            col4.metric("📌 To Do",todo)
-
-            # Pie Chart
-            status_counts = df["status"].value_counts()
-            fig, ax = plt.subplots()
-            ax.pie(status_counts,labels=status_counts.index,autopct="%1.1f%%",startangle=90)
-            ax.axis("equal")
-            st.pyplot(fig)
-
-            # Completion Over Time
-            if "completed_at" in df and not df["completed_at"].isna().all():
-                completed_over_time = df.dropna(subset=["completed_at"]).groupby(df["completed_at"].dt.date).size()
-                st.line_chart(completed_over_time)
-
-            # Download CSV
-            st.download_button(
-                "📥 Download Task Data (CSV)",
-                df.to_csv(index=False),
-                file_name=f"tasks_{st.session_state['current_user']}.csv",
-                mime="text/csv"
-            )
-
-        except Exception as e:
-            st.session_state["task_message"] = f"⚠️ Could not generate analytics: {e}"
+                            st.session_state["task_message"] = f
