@@ -198,7 +198,8 @@ with tab1:
             with cols[idx]:
                 st.markdown(f"### {status}")
                 tasks = df[df["status"] == status]
-                for _, row in tasks.iterrows():
+                for i, row in tasks.iterrows():
+                    key_base = row["id"]
                     st.markdown(
                         f"""
                         <div style="background-color:{box_colors[status]};
@@ -214,25 +215,30 @@ with tab1:
                         """,
                         unsafe_allow_html=True
                     )
-                    # Status and delete buttons
+
                     col1, col2 = st.columns([2,1])
-                    with col1:
-                        new_status = st.selectbox(
-                            "Change Status",
-                            options=status_order,
-                            index=status_order.index(row["status"]),
-                            key=f"status_{row['id']}"
-                        )
-                        if new_status != row["status"]:
-                            st.session_state["tasks"].loc[df["id"]==row["id"], "status"] = new_status
-                            if new_status == "Done":
-                                st.session_state["tasks"].loc[df["id"]==row["id"], "completed_at"] = datetime.now().isoformat()
-                            save_tasks()
-                    with col2:
-                        if st.button("Delete", key=f"del_{row['id']}"):
-                            st.session_state["tasks"] = df[df["id"] != row["id"]]
-                            save_tasks()
-                            st.success("🗑️ Task deleted")
+
+                    # Status selectbox callback
+                    new_status = st.selectbox(
+                        "Change Status",
+                        options=status_order,
+                        index=status_order.index(row["status"]),
+                        key=f"status_{key_base}"
+                    )
+                    if new_status != row["status"]:
+                        idx_row = df.index[df["id"]==row["id"]][0]
+                        st.session_state["tasks"].at[idx_row, "status"] = new_status
+                        if new_status == "Done":
+                            st.session_state["tasks"].at[idx_row, "completed_at"] = datetime.now().isoformat()
+                        save_tasks()
+                        st.experimental_rerun()
+
+                    # Delete button callback
+                    if st.button("Delete", key=f"del_{key_base}"):
+                        st.session_state["tasks"] = df[df["id"] != row["id"]]
+                        save_tasks()
+                        st.success("🗑️ Task deleted")
+                        st.experimental_rerun()
 
 # ------------------- Analytics -------------------
 with tab2:
