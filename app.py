@@ -137,6 +137,7 @@ with tab1:
                 st.markdown(f"🏷 {row['tag'] if row['tag'] else '-'}")
 
 # --- Kanban View ---
+# --- Kanban View ---
 with tab2:
     st.header("🗂 Kanban Board")
     if df.empty:
@@ -144,17 +145,40 @@ with tab2:
     else:
         cols = st.columns(3)
         statuses = ["To Do", "In Progress", "Done"]
+        colors = {
+            "To Do": "#FFF3CD",          # soft yellow
+            "In Progress": "#CCE5FF",    # soft blue
+            "Done": "#D4EDDA"            # soft green
+        }
         for i, status in enumerate(statuses):
             with cols[i]:
                 st.subheader(status)
                 for _, row in df[df["status"] == status].iterrows():
+                    # format due date
+                    due = "-"
+                    if row["due_date"]:
+                        try:
+                            due = pd.to_datetime(row["due_date"]).strftime("%b %d, %Y")
+                        except:
+                            due = row["due_date"]
+
+                    # build task card
                     st.markdown(
-                        f"✅ **{row['title']}** <br>"
-                        f"🔢 Priority: {row['priority']} <br>"
-                        f"🏷 {row['tag'] if row['tag'] else '-'} <br>"
-                        f"📅 {row['due_date'] if row['due_date'] else '-'}",
+                        f"""
+                        <div style="background-color:{colors[status]}; 
+                                    padding:12px; 
+                                    border-radius:10px; 
+                                    margin-bottom:10px;
+                                    box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            <b>✅ {row['title']}</b><br>
+                            🔢 Priority: <b>{row['priority']}</b><br>
+                            🏷 {row['tag'] if row['tag'] else '-'}<br>
+                            📅 {due}
+                        </div>
+                        """,
                         unsafe_allow_html=True
                     )
+
 
 # --- Analytics View ---
 with tab3:
