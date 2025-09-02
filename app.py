@@ -14,7 +14,7 @@ import numpy as np
 # ------------------- Page Config -------------------
 st.set_page_config(
     page_title="Data Analyst Portfolio - Task Management System",
-    page_icon="📊",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
