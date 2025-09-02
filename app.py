@@ -266,20 +266,50 @@ if st.session_state["current_user"] is not None:
     # --------------------------------------------------
     # Analytics
     # --------------------------------------------------
-    with tab2:
-        st.header("📊 Task Analytics")
-        df = get_tasks()
-        if df.empty:
-            st.info("No data to analyze yet. Add tasks first!")
-        else:
-            try:
-                df["created_at"] = pd.to_datetime(df["created_at"],errors="coerce")
-                df["completed_at"] = pd.to_datetime(df["completed_at"],errors="coerce")
+  # --------------------------------------------------
+# Analytics
+# --------------------------------------------------
+with tab2:
+    st.header("📊 Task Analytics")
+    df = get_tasks()
+    if df.empty:
+        st.info("No data to analyze yet. Add tasks first!")
+    else:
+        try:
+            df["created_at"] = pd.to_datetime(df["created_at"],errors="coerce")
+            df["completed_at"] = pd.to_datetime(df["completed_at"],errors="coerce")
 
-                total = len(df)
-                done = len(df[df["status"]=="Done"])
-                in_progress = len(df[df["status"]=="In Progress"])
-                todo = len(df[df["status"]=="To Do"])
+            # Metrics
+            total = len(df)
+            done = len(df[df["status"]=="Done"])
+            in_progress = len(df[df["status"]=="In Progress"])
+            todo = len(df[df["status"]=="To Do"])
 
-                col1,col2,col3,col4 = st.columns(4)
-                col1.metric("Total Tasks",total)
+            col1,col2,col3,col4 = st.columns(4)
+            col1.metric("Total Tasks",total)
+            col2.metric("✅ Done",done)
+            col3.metric("🚧 In Progress",in_progress)
+            col4.metric("📌 To Do",todo)
+
+            # Pie Chart
+            status_counts = df["status"].value_counts()
+            fig, ax = plt.subplots()
+            ax.pie(status_counts,labels=status_counts.index,autopct="%1.1f%%",startangle=90)
+            ax.axis("equal")
+            st.pyplot(fig)
+
+            # Completion Over Time
+            if "completed_at" in df and not df["completed_at"].isna().all():
+                completed_over_time = df.dropna(subset=["completed_at"]).groupby(df["completed_at"].dt.date).size()
+                st.line_chart(completed_over_time)
+
+            # Download CSV
+            st.download_button(
+                "📥 Download Task Data (CSV)",
+                df.to_csv(index=False),
+                file_name=f"tasks_{st.session_state['current_user']}.csv",
+                mime="text/csv"
+            )
+
+        except Exception as e:
+            st.session_state["task_message"] = f"⚠️ Could not generate analytics: {e}"
