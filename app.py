@@ -11,6 +11,12 @@ from datetime import datetime
 st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
 # --------------------------------------------------
+# Session State for Messages
+# --------------------------------------------------
+if "task_message" not in st.session_state:
+    st.session_state["task_message"] = ""
+
+# --------------------------------------------------
 # Motivational Quotes
 # --------------------------------------------------
 quotes = [
@@ -62,7 +68,7 @@ def add_task(title, priority, tag, due_date):
         conn = get_conn()
         c = conn.cursor()
 
-        # Check for duplicates based on title + priority
+        # Check duplicates based on title + priority
         c.execute(
             "SELECT COUNT(*) FROM tasks WHERE title=? AND priority=?",
             (title, priority),
@@ -70,7 +76,7 @@ def add_task(title, priority, tag, due_date):
         exists = c.fetchone()[0]
 
         if exists > 0:
-            st.warning("⚠️ Task already exists with the same name and priority.")
+            st.session_state["task_message"] = "⚠️ Task already exists with the same name and priority."
         else:
             task_id = str(datetime.now().timestamp()).replace(".", "")
             c.execute(
@@ -78,12 +84,11 @@ def add_task(title, priority, tag, due_date):
                 (task_id, title, "To Do", priority, tag, due_date, datetime.now().isoformat()),
             )
             conn.commit()
-            st.success("Task added ✅")
-            st.rerun()  # Only rerun after adding
+            st.session_state["task_message"] = "Task added ✅"
 
         conn.close()
     except Exception as e:
-        st.error(f"⚠️ Could not add task: {e}")
+        st.session_state["task_message"] = f"⚠️ Could not add task: {e}"
 
 def get_tasks():
     try:
@@ -92,7 +97,7 @@ def get_tasks():
         conn.close()
         return df
     except Exception as e:
-        st.error(f"⚠️ Could not fetch tasks: {e}")
+        st.session_state["task_message"] = f"⚠️ Could not fetch tasks: {e}"
         return pd.DataFrame()
 
 def update_status(task_id, new_status):
@@ -109,7 +114,7 @@ def update_status(task_id, new_status):
         conn.commit()
         conn.close()
     except Exception as e:
-        st.error(f"⚠️ Could not update status: {e}")
+        st.session_state["task_message"] = f"⚠️ Could not update status: {e}"
 
 def delete_task(task_id):
     try:
@@ -119,7 +124,7 @@ def delete_task(task_id):
         conn.commit()
         conn.close()
     except Exception as e:
-        st.error(f"⚠️ Could not delete task: {e}")
+        st.session_state["task_message"] = f"⚠️ Could not delete task: {e}"
 
 # --------------------------------------------------
 # Initialize DB
@@ -140,7 +145,11 @@ with st.sidebar.form("task_form"):
         if title.strip():
             add_task(title, priority, tag.strip(), str(due_date))
         else:
-            st.warning("⚠️ Please enter a task title.")
+            st.session_state["task_message"] = "⚠️ Please enter a task title."
+
+# Show message if exists
+if st.session_state["task_message"]:
+    st.info(st.session_state["task_message"])
 
 # --------------------------------------------------
 # Main Tabs
@@ -191,12 +200,13 @@ with tab1:
                     )
                     if new_status != row["status"]:
                         update_status(row["id"], new_status)
-                        st.rerun()
+                        st.session_state["task_message"] = f"Task '{row['title']}' marked as {new_status}"
+                        st.experimental_rerun()
                 with col3:
                     if st.button("🗑", key=f"del_{row['id']}"):
                         delete_task(row["id"])
-                        st.success("Deleted successfully ✅")
-                        st.rerun()
+                        st.session_state["task_message"] = f"Task '{row['title']}' deleted successfully ✅"
+                        st.experimental_rerun()
 
 # --------------------------------------------------
 # Analytics
@@ -247,4 +257,4 @@ with tab2:
             )
 
         except Exception as e:
-            st.error(f"⚠️ Could not generate analytics: {e}")
+            st.session_state["task_message"] = f"⚠️ Could not generate analytics: {e}"
