@@ -8,7 +8,7 @@ from datetime import datetime
 # --------------------------------------------------
 # Page Config
 # --------------------------------------------------
-st.set_page_config(page_title="To-Do List App", page_icon="✅", layout="wide")
+st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
 # --------------------------------------------------
 # Motivational Quotes
@@ -24,7 +24,7 @@ quotes = [
 st.markdown(
     f"""
     <div style="background-color:#2E86C1;padding:15px;border-radius:10px;margin-bottom:20px;">
-        <h3 style="color:white;text-align:center;">{random.choice(quotes)}</h3>
+        <h3 style="color:white;text-align:center;font-weight:600;font-size:20px;">{random.choice(quotes)}</h3>
     </div>
     """,
     unsafe_allow_html=True,
@@ -64,10 +64,7 @@ def add_task(title, priority, tag, due_date):
 
         # Check for duplicates
         c.execute(
-            """
-            SELECT COUNT(*) FROM tasks 
-            WHERE title=? AND priority=? AND tag=? AND due_date=?
-            """,
+            "SELECT COUNT(*) FROM tasks WHERE title=? AND priority=? AND tag=? AND due_date=?",
             (title, priority, tag, due_date),
         )
         exists = c.fetchone()[0]
@@ -88,30 +85,40 @@ def add_task(title, priority, tag, due_date):
         st.error(f"⚠️ Could not add task: {e}")
 
 def get_tasks():
-    conn = get_conn()
-    df = pd.read_sql_query("SELECT * FROM tasks", conn)
-    conn.close()
-    return df
+    try:
+        conn = get_conn()
+        df = pd.read_sql_query("SELECT * FROM tasks", conn)
+        conn.close()
+        return df
+    except Exception as e:
+        st.error(f"⚠️ Could not fetch tasks: {e}")
+        return pd.DataFrame()
 
 def update_status(task_id, new_status):
-    conn = get_conn()
-    c = conn.cursor()
-    if new_status == "Done":
-        c.execute(
-            "UPDATE tasks SET status=?, completed_at=? WHERE id=?",
-            (new_status, datetime.now().isoformat(), task_id),
-        )
-    else:
-        c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, task_id))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        if new_status == "Done":
+            c.execute(
+                "UPDATE tasks SET status=?, completed_at=? WHERE id=?",
+                (new_status, datetime.now().isoformat(), task_id),
+            )
+        else:
+            c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, task_id))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Could not update status: {e}")
 
 def delete_task(task_id):
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Could not delete task: {e}")
 
 # --------------------------------------------------
 # Initialize DB
@@ -130,7 +137,7 @@ with st.sidebar.form("task_form"):
     submitted = st.form_submit_button("Add Task")
     if submitted:
         if title.strip():
-            add_task(title, priority, tag, str(due_date))
+            add_task(title, priority, tag.strip(), str(due_date))
             st.rerun()
         else:
             st.warning("⚠️ Please enter a task title.")
@@ -145,19 +152,28 @@ tab1, tab2 = st.tabs(["📋 Task Board", "📊 Analytics"])
 # --------------------------------------------------
 with tab1:
     st.header("📋 Your Tasks")
-
     df = get_tasks()
 
     if df.empty:
         st.info("No tasks yet. Add some from the sidebar!")
     else:
+        colors = {
+            "To Do": "#F5B7B1",          # soft red
+            "In Progress": "#F9E79F",    # soft yellow
+            "Done": "#ABEBC6"             # soft green
+        }
+
         for _, row in df.iterrows():
             with st.container():
                 col1, col2, col3 = st.columns([6, 2, 1])
                 with col1:
                     st.markdown(
                         f"""
-                        <div style="padding:10px;margin-bottom:10px;border-radius:10px;background-color:#F4F6F7;">
+                        <div style="
+                            padding:10px;margin-bottom:10px;
+                            border-radius:10px;
+                            background-color:{colors.get(row['status'], '#D6EAF8')};
+                            color:#1B2631;">
                             <b>{row['title']}</b><br>
                             🔢 Priority: {row['priority']}<br>
                             🏷 Category: {row['tag'] if row['tag'] else '-'}<br>
@@ -208,7 +224,7 @@ with tab2:
             col3.metric("🚧 In Progress", in_progress)
             col4.metric("📌 To Do", todo)
 
-            # Chart
+            # Pie Chart
             status_counts = df["status"].value_counts()
             fig, ax = plt.subplots()
             ax.pie(status_counts, labels=status_counts.index, autopct="%1.1f%%", startangle=90)
