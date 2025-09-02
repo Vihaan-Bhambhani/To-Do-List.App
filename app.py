@@ -370,12 +370,20 @@ with st.sidebar:
         st.session_state["tasks"] = pd.DataFrame()
         st.rerun()
 
-# ------------------- Motivational Quote (Visible after login) -------------------
-st.markdown(f"""
-<div class="quote-container">
-    <h3>{random.choice(quotes)}</h3>
-</div>
-""", unsafe_allow_html=True)
+# ------------------- Motivational Quote (Always visible in sidebar) -------------------
+with st.sidebar:
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
+                padding: 1rem; 
+                border-radius: 10px; 
+                margin: 1rem 0; 
+                text-align: center; 
+                color: white; 
+                font-weight: 600;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <div style="font-size: 0.9rem;">{random.choice(quotes)}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ------------------- Enhanced Tabs -------------------
 tab1, tab2, tab3 = st.tabs(["📋 Kanban Board", "📊 Analytics Dashboard", "📈 Performance Insights"])
