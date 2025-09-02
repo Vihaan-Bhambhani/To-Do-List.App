@@ -177,11 +177,18 @@ with tab1:
                         st.balloons()
                     st.rerun()
             with col3:
-                if pd.notna(row["id"]):
-                    if st.button("🗑", key=f"del_{row['id']}"):
-                        delete_task(int(row["id"]))
-                        st.success("Deleted ✅")
-                        st.rerun()
+                task_id = row.get("id", None)
+                if pd.notna(task_id):
+                    if st.button("🗑", key=f"del_{task_id}"):
+                        try:
+                            delete_task(int(task_id))
+                            st.success(f"Deleted '{row['title']}' ✅")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"⚠️ Could not delete this task: {e}")
+                else:
+                    st.caption("⚠️ Invalid Task (no ID)")
+
 
     # Kanban View
     st.subheader("🗂 Kanban Board")
