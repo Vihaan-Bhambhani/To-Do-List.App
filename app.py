@@ -13,14 +13,12 @@ DB_FILE = "tasks.db"
 def get_conn():
     return sqlite3.connect(DB_FILE, check_same_thread=False)
 
-def migrate_db():
+def init_db():
     conn = get_conn()
     c = conn.cursor()
-
-    # Ensure table exists with integer ID
     c.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id TEXT PRIMARY KEY,
             title TEXT,
             status TEXT,
             priority INTEGER,
@@ -31,46 +29,16 @@ def migrate_db():
         )
     """)
     conn.commit()
-
-    # Check if ID column is not integer
-    c.execute("PRAGMA table_info(tasks)")
-    cols = c.fetchall()
-    id_col = [col for col in cols if col[1] == "id"]
-    if id_col and id_col[0][2].lower() != "integer":
-        # Backup old table
-        c.execute("ALTER TABLE tasks RENAME TO tasks_old")
-        # Create fresh tasks table with correct schema
-        c.execute("""
-            CREATE TABLE tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                status TEXT,
-                priority INTEGER,
-                tag TEXT,
-                due_date TEXT,
-                created_at TEXT,
-                completed_at TEXT
-            )
-        """)
-        # Copy old data (auto-generate new IDs)
-        c.execute("""
-            INSERT INTO tasks (title, status, priority, tag, due_date, created_at, completed_at)
-            SELECT title, status, priority, tag, due_date, created_at, completed_at
-            FROM tasks_old
-        """)
-        c.execute("DROP TABLE tasks_old")
-        conn.commit()
     conn.close()
-
-def init_db():
-    migrate_db()
 
 def add_task(title, priority, tag, due_date):
     conn = get_conn()
     c = conn.cursor()
+    # use timestamp as unique ID (avoids int/UUID mismatch)
+    task_id = str(datetime.now().timestamp()).replace(".", "")
     c.execute(
-        "INSERT INTO tasks (title, status, priority, tag, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (title, "To Do", priority, tag, due_date, datetime.now().isoformat())
+        "INSERT INTO tasks (id, title, status, priority, tag, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (task_id, title, "To Do", priority, tag, due_date, datetime.now().isoformat())
     )
     conn.commit()
     conn.close()
@@ -103,9 +71,12 @@ def get_tasks():
 # -----------------------
 st.set_page_config(
     page_title="Data Analyst To-Do List",
-    page_icon="🧠",   # Clean favicon instead of weird Streamlit logo
+    page_icon="🧠",
     layout="wide"
 )
+
+# Initialize DB
+init_db()
 
 # Motivational Quotes (A/B Testing)
 quotes_a = [
@@ -179,13 +150,13 @@ with tab1:
                     key=f"status_{row['id']}"
                 )
                 if new_status != row["status"]:
-                    update_status(int(row["id"]), new_status)
+                    update_status(row["id"], new_status)
                     if new_status == "Done":
                         st.balloons()
                     st.rerun()
             with col3:
                 if st.button("🗑", key=f"del_{row['id']}"):
-                    delete_task(int(row["id"]))
+                    delete_task(row["id"])
                     st.success("Deleted ✅")
                     st.rerun()
 
