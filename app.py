@@ -11,10 +11,12 @@ from datetime import datetime
 st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
 # --------------------------------------------------
-# Session State for Messages
+# Session State for Messages and Rerun Flag
 # --------------------------------------------------
 if "task_message" not in st.session_state:
     st.session_state["task_message"] = ""
+if "rerun_flag" not in st.session_state:
+    st.session_state["rerun_flag"] = False
 
 # --------------------------------------------------
 # Motivational Quotes
@@ -67,8 +69,6 @@ def add_task(title, priority, tag, due_date):
     try:
         conn = get_conn()
         c = conn.cursor()
-
-        # Check duplicates based on title + priority
         c.execute(
             "SELECT COUNT(*) FROM tasks WHERE title=? AND priority=?",
             (title, priority),
@@ -85,6 +85,7 @@ def add_task(title, priority, tag, due_date):
             )
             conn.commit()
             st.session_state["task_message"] = "Task added ✅"
+            st.session_state["rerun_flag"] = True
 
         conn.close()
     except Exception as e:
@@ -113,6 +114,7 @@ def update_status(task_id, new_status):
             c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, task_id))
         conn.commit()
         conn.close()
+        st.session_state["rerun_flag"] = True
     except Exception as e:
         st.session_state["task_message"] = f"⚠️ Could not update status: {e}"
 
@@ -123,6 +125,7 @@ def delete_task(task_id):
         c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
         conn.commit()
         conn.close()
+        st.session_state["rerun_flag"] = True
     except Exception as e:
         st.session_state["task_message"] = f"⚠️ Could not delete task: {e}"
 
@@ -167,9 +170,9 @@ with tab1:
         st.info("No tasks yet. Add some from the sidebar!")
     else:
         colors = {
-            "To Do": "#F5B7B1",          # soft red
-            "In Progress": "#F9E79F",    # soft yellow
-            "Done": "#ABEBC6"             # soft green
+            "To Do": "#F5B7B1",
+            "In Progress": "#F9E79F",
+            "Done": "#ABEBC6"
         }
 
         for _, row in df.iterrows():
@@ -201,12 +204,11 @@ with tab1:
                     if new_status != row["status"]:
                         update_status(row["id"], new_status)
                         st.session_state["task_message"] = f"Task '{row['title']}' marked as {new_status}"
-                        st.experimental_rerun()
+
                 with col3:
                     if st.button("🗑", key=f"del_{row['id']}"):
                         delete_task(row["id"])
                         st.session_state["task_message"] = f"Task '{row['title']}' deleted successfully ✅"
-                        st.experimental_rerun()
 
 # --------------------------------------------------
 # Analytics
@@ -258,3 +260,10 @@ with tab2:
 
         except Exception as e:
             st.session_state["task_message"] = f"⚠️ Could not generate analytics: {e}"
+
+# --------------------------------------------------
+# Rerun if flagged
+# --------------------------------------------------
+if st.session_state["rerun_flag"]:
+    st.session_state["rerun_flag"] = False
+    st.experimental_rerun()
