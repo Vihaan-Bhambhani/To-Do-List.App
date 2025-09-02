@@ -62,15 +62,15 @@ def add_task(title, priority, tag, due_date):
         conn = get_conn()
         c = conn.cursor()
 
-        # Check for duplicates
+        # Check for duplicates based on title + priority
         c.execute(
-            "SELECT COUNT(*) FROM tasks WHERE title=? AND priority=? AND tag=? AND due_date=?",
-            (title, priority, tag, due_date),
+            "SELECT COUNT(*) FROM tasks WHERE title=? AND priority=?",
+            (title, priority),
         )
         exists = c.fetchone()[0]
 
         if exists > 0:
-            st.warning("⚠️ Task already exists with the same details.")
+            st.warning("⚠️ Task already exists with the same name and priority.")
         else:
             task_id = str(datetime.now().timestamp()).replace(".", "")
             c.execute(
@@ -79,6 +79,7 @@ def add_task(title, priority, tag, due_date):
             )
             conn.commit()
             st.success("Task added ✅")
+            st.rerun()  # Only rerun after adding
 
         conn.close()
     except Exception as e:
@@ -138,7 +139,6 @@ with st.sidebar.form("task_form"):
     if submitted:
         if title.strip():
             add_task(title, priority, tag.strip(), str(due_date))
-            st.rerun()
         else:
             st.warning("⚠️ Please enter a task title.")
 
