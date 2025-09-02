@@ -1,5 +1,5 @@
 # To-Do-List.App
-# 🗂 To-Do List App (Data Analyst Demo)
+# 🗂 To-Do List App
 
 A productivity-focused **To-Do List web app** built with **Streamlit**, designed not just for task management but also to demonstrate **data analysis, product analytics, and A/B testing skills**.  
 
