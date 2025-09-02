@@ -117,7 +117,6 @@ if not st.session_state["logged_in"]:
         st.stop()  # Stops the rest of the app until user logs in
 
 # ------------------- Main App -------------------
-# ------------------- User Task Functions -------------------
 def user_file():
     return f"tasks_{st.session_state['current_user']}.csv"
 
@@ -205,7 +204,7 @@ if st.session_state.get("task_message"):
 # ------------------- Motivational Quote -------------------
 st.markdown(
     f"""
-    <div style="background-color:#2E86C1;padding:15px;border-radius:10px;margin-bottom:20px;">
+    <div style="background-color:#1B4F72;padding:15px;border-radius:10px;margin-bottom:20px;">
         <h3 style="color:white;text-align:center;font-weight:600;font-size:20px;">{random.choice(quotes)}</h3>
     </div>
     """,
@@ -223,6 +222,7 @@ with tab1:
     else:
         status_order = ["To Do","In Progress","Done"]
         cols = st.columns(len(status_order))
+        box_colors = {"To Do":"#3498DB","In Progress":"#F1C40F","Done":"#2ECC71"}  # darker for readability
         for idx, status in enumerate(status_order):
             with cols[idx]:
                 st.markdown(f"### {status}")
@@ -230,8 +230,11 @@ with tab1:
                 for _, row in tasks.iterrows():
                     st.markdown(
                         f"""
-                        <div style="background-color:{'#AED6F1' if status=='To Do' else '#F9E79F' if status=='In Progress' else '#ABEBC6'};
-                                    padding:10px;border-radius:8px;margin-bottom:10px;">
+                        <div style="background-color:{box_colors[status]};
+                                    color:white;
+                                    padding:10px;
+                                    border-radius:8px;
+                                    margin-bottom:10px;">
                         <strong>{row['title']}</strong><br>
                         🔢 Priority: {row['priority']}<br>
                         🏷 Category: {row['tag'] if row['tag'] else '-'}<br>
@@ -276,7 +279,7 @@ with tab2:
         st.subheader("Task Status Distribution")
         status_counts = df["status"].value_counts()
         fig1, ax1 = plt.subplots()
-        ax1.pie(status_counts, labels=status_counts.index, autopct="%1.1f%%", startangle=90, colors=['#AED6F1','#F9E79F','#ABEBC6'])
+        ax1.pie(status_counts, labels=status_counts.index, autopct="%1.1f%%", startangle=90, colors=[box_colors[k] for k in status_counts.index])
         ax1.axis('equal')
         st.pyplot(fig1)
 
