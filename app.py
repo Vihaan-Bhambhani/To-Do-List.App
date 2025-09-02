@@ -140,6 +140,7 @@ def add_task(title, priority, tag, due_date):
     df = get_tasks()
     if ((df["title"].str.lower() == title.lower()) & (df["priority"] == priority)).any():
         st.session_state["task_message"] = "⚠️ Task already exists with same name and priority."
+        st.session_state["rerun_needed"] = True
         return
     task_id = str(datetime.now().timestamp()).replace(".","")
     new_task = pd.DataFrame([{
@@ -194,6 +195,7 @@ with st.sidebar.form("task_form"):
             add_task(title, priority, tag.strip(), str(due_date))
         else:
             st.session_state["task_message"] = "⚠️ Please enter a task title."
+            st.session_state["rerun_needed"] = True
 
 # ------------------- Display Task Messages -------------------
 if st.session_state.get("task_message"):
@@ -209,11 +211,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# ------------------- Safe rerun -------------------
-if st.session_state.get("rerun_needed"):
-    st.session_state["rerun_needed"] = False
-    st.experimental_rerun()
 
 # ------------------- Tabs -------------------
 tab1, tab2 = st.tabs(["📋 Task Board","📊 Analytics"])
@@ -237,7 +234,7 @@ with tab1:
                                     padding:10px;border-radius:8px;margin-bottom:10px;">
                         <strong>{row['title']}</strong><br>
                         🔢 Priority: {row['priority']}<br>
-                        🏷 Tag: {row['tag'] if row['tag'] else '-'}<br>
+                        🏷 Category: {row['tag'] if row['tag'] else '-'}<br>
                         📅 Due: {row['due_date']}
                         </div>
                         """,
@@ -297,3 +294,8 @@ with tab2:
             file_name=f"tasks_{st.session_state['current_user']}.csv",
             mime="text/csv"
         )
+
+# ------------------- Safe rerun -------------------
+if st.session_state.get("rerun_needed"):
+    st.session_state["rerun_needed"] = False
+    st.experimental_rerun()
