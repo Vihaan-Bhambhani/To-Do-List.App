@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, date, timedelta
 import dateparser
 import matplotlib.pyplot as plt
+import random
 
 DB_FILE = "tasks.db"
 
@@ -96,6 +97,24 @@ def parse_natural_input(text):
 st.set_page_config(page_title="📝 Smart To-Do", page_icon="✅", layout="wide")
 
 st.title("✅ Smart To-Do List with Analytics")
+
+
+# Motivational quotes
+QUOTES = [
+    "🌟 Believe you can and you're halfway there.",
+    "🚀 Small progress each day adds up to big results.",
+    "🔥 Push yourself, because no one else is going to do it for you.",
+    "💡 Great things never come from comfort zones.",
+    "✅ Don’t watch the clock; do what it does. Keep going.",
+    "🏆 Success is the sum of small efforts repeated day in and day out.",
+    "🌱 Every accomplishment starts with the decision to try."
+]
+
+st.markdown("---")
+quote = random.choice(QUOTES)
+st.info(f"💬 **Motivation for Today:** {quote}")
+st.markdown("---")
+
 
 init_db()
 df = fetch_tasks()
