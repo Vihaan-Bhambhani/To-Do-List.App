@@ -441,7 +441,7 @@ with tab1:
                     tasks_count = len(df[df["status"] == status])
                     st.markdown(f"""
                     <div style="background: {status_colors[status]}; color: white; padding: 1rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;">
-                        <h3>{status_emojis[status]} {status}</h3>
+                        <h4 style="margin:0; font-size:1.1rem;">{status_emojis[status]} {status}</h4>
                         <p>{tasks_count} tasks</p>
                     </div>
                     """, unsafe_allow_html=True)
