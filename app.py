@@ -162,25 +162,25 @@ with tab1:
                 df[col] = ""
         #st.dataframe(df[expected_cols])
         for _, row in df.iterrows():
-    col1, col2, col3 = st.columns([3, 2, 2])
-    with col1:
-        st.markdown(f"**{row['title']}**")
-    with col2:
-        new_status = st.selectbox(
-            "Status",
-            ["To Do", "In Progress", "Done"],
-            index=["To Do", "In Progress", "Done"].index(row["status"]),
-            key=f"status_{row['id']}"
-        )
-        if new_status != row["status"]:
-            conn = sqlite3.connect(DB_FILE)
-            c = conn.cursor()
-            c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, row["id"]))
-            conn.commit()
-            conn.close()
-            st.experimental_rerun()
-    with col3:
-        st.markdown(f"🔢 Priority: **{row['priority']}**")
+            col1, col2, col3 = st.columns([3, 2, 2])
+            with col1:
+                st.markdown(f"**{row['title']}**")
+            with col2:
+                new_status = st.selectbox(
+                    "Status",
+                    ["To Do", "In Progress", "Done"],
+                    index=["To Do", "In Progress", "Done"].index(row["status"]),
+                    key=f"status_{row['id']}"
+                )
+                if new_status != row["status"]:
+                    conn = sqlite3.connect(DB_FILE)
+                    c = conn.cursor()
+                    c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, row["id"]))
+                    conn.commit()
+                    conn.close()
+                    st.experimental_rerun()
+            with col3:
+                st.markdown(f"🔢 Priority: **{row['priority']}**")
 
 
 # --- Kanban View ---
