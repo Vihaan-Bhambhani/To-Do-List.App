@@ -6,6 +6,13 @@ from datetime import datetime
 import os
 import hashlib
 
+# ------------------- Page Config -------------------
+st.set_page_config(
+    page_title="Data Analyst To-Do List",
+    page_icon="🧠",
+    layout="centered"
+)
+
 # ------------------- Session State -------------------
 if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
@@ -16,7 +23,7 @@ if "rerun_flag" not in st.session_state:
 if "auth_action" not in st.session_state:
     st.session_state["auth_action"] = "login"
 
-# ------------------- Users File -------------------
+# ------------------- Users CSV -------------------
 USERS_FILE = "users.csv"
 
 def hash_password(password):
@@ -59,7 +66,6 @@ quotes = [
 
 # ------------------- Centered Login/Register -------------------
 if st.session_state["current_user"] is None:
-    st.set_page_config(page_title="Data Analyst To-Do List", layout="centered")
     container = st.container()
     with container:
         st.markdown("<h1 style='text-align:center'>🧠 Login / Register</h1>", unsafe_allow_html=True)
@@ -98,7 +104,7 @@ if st.session_state["current_user"] is None:
 
 # ------------------- Main App -------------------
 if st.session_state["current_user"] is not None:
-    st.set_page_config(page_title="Data Analyst To-Do List", layout="wide")
+    st.set_page_config(page_title="Data Analyst To-Do List", page_icon="🧠", layout="wide")
 
     # ------------------- User Task Functions -------------------
     def user_file():
@@ -188,77 +194,3 @@ if st.session_state["current_user"] is not None:
 
     # ------------------- Tabs -------------------
     tab1, tab2 = st.tabs(["📋 Task Board","📊 Analytics"])
-
-    # ------------------- Task Board -------------------
-    with tab1:
-        st.header("📋 Task Board")
-        df = get_tasks()
-        if df.empty:
-            st.info("No tasks yet. Add some from the sidebar!")
-        else:
-            colors = {"To Do":"#F5B7B1","In Progress":"#F9E79F","Done":"#ABEBC6"}
-            for _, row in df.iterrows():
-                with st.container():
-                    col1,col2,col3 = st.columns([6,2,1])
-                    with col1:
-                        st.markdown(f"""
-                            <div style="
-                                padding:10px;margin-bottom:10px;
-                                border-radius:10px;
-                                background-color:{colors.get(row['status'],'#D6EAF8')};
-                                color:#1B2631;">
-                                <b>{row['title']}</b><br>
-                                🔢 Priority: {row['priority']}<br>
-                                🏷 Category: {row['tag'] if row['tag'] else '-'}<br>
-                                📅 {row['due_date']}
-                            </div>
-                        """,unsafe_allow_html=True)
-                    with col2:
-                        new_status = st.selectbox(
-                            "Status",["To Do","In Progress","Done"],
-                            index=["To Do","In Progress","Done"].index(row["status"]),
-                            key=f"status_{row['id']}")
-                        if new_status != row["status"]:
-                            update_status(row["id"], new_status)
-                    with col3:
-                        if st.button("🗑",key=f"del_{row['id']}"):
-                            delete_task(row["id"])
-
-    # ------------------- Analytics -------------------
-    with tab2:
-        st.header("📊 Task Analytics")
-        df = get_tasks()
-        if df.empty:
-            st.info("No data to analyze yet. Add tasks first!")
-        else:
-            try:
-                df["created_at"] = pd.to_datetime(df["created_at"],errors="coerce")
-                df["completed_at"] = pd.to_datetime(df["completed_at"],errors="coerce")
-                total = len(df)
-                done = len(df[df["status"]=="Done"])
-                in_progress = len(df[df["status"]=="In Progress"])
-                todo = len(df[df["status"]=="To Do"])
-                col1,col2,col3,col4 = st.columns(4)
-                col1.metric("Total Tasks",total)
-                col2.metric("✅ Done",done)
-                col3.metric("🚧 In Progress",in_progress)
-                col4.metric("📌 To Do",todo)
-                # Pie chart
-                status_counts = df["status"].value_counts()
-                fig, ax = plt.subplots()
-                ax.pie(status_counts,labels=status_counts.index,autopct="%1.1f%%",startangle=90)
-                ax.axis("equal")
-                st.pyplot(fig)
-                # Completed over time
-                if "completed_at" in df and not df["completed_at"].isna().all():
-                    completed_over_time = df.dropna(subset=["completed_at"]).groupby(df["completed_at"].dt.date).size()
-                    st.line_chart(completed_over_time)
-                # Download CSV
-                st.download_button(
-                    "📥 Download Task Data (CSV)",
-                    df.to_csv(index=False),
-                    file_name=f"tasks_{st.session_state['current_user']}.csv",
-                    mime="text/csv"
-                )
-            except Exception as e:
-                st.warning(f"⚠️ Could not generate analytics: {e}")
