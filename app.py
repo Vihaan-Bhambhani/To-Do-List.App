@@ -252,4 +252,13 @@ if st.session_state["current_user"] is not None:
                 # Completed over time
                 if "completed_at" in df and not df["completed_at"].isna().all():
                     completed_over_time = df.dropna(subset=["completed_at"]).groupby(df["completed_at"].dt.date).size()
-                   
+                    st.line_chart(completed_over_time)
+                # Download CSV
+                st.download_button(
+                    "📥 Download Task Data (CSV)",
+                    df.to_csv(index=False),
+                    file_name=f"tasks_{st.session_state['current_user']}.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.warning(f"⚠️ Could not generate analytics: {e}")
