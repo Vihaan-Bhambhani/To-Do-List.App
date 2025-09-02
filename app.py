@@ -174,6 +174,24 @@ quotes = [
     "🎊 Celebrate progress, no matter how small.",
     "✨ Make it happen, step by step.",
     "🌈 Every completed task is a step forward.",
+    "💪 Success is a series of small efforts repeated daily.",
+    "🎨 Create the life you want, one task at a time.",
+    "🔮 The future depends on what you do today.",
+    "🌟 Believe you can and you're halfway there.",
+    "🚀 Dream big, start small, act now.",
+    "🎪 Life is what happens between your to-do lists.",
+    "⭐ You don't have to be perfect, just be consistent.",
+    "🌸 Bloom where you are planted.",
+    "🎭 Be yourself, everyone else is taken.",
+    "🎯 Aim for progress, not perfection.",
+    "🌊 Go with the flow, but know where you're going.",
+    "🎈 Rise above the storm and find the sunshine.",
+    "🦋 Change is beautiful, embrace it.",
+    "🎪 Life is a circus, enjoy the show!",
+    "🌻 Stay positive, work hard, make it happen.",
+    "🎨 Paint your own picture of success.",
+    "🚂 Keep moving forward, no matter how slow.",
+    "🎵 Dance to your own rhythm.",
 ]
 
 # ------------------- Login/Register -------------------
@@ -288,105 +306,117 @@ load_tasks()
 # ------------------- Main Header (Only show before login) -------------------
 # This section is now moved to after login check
 
-# ------------------- Sidebar: Enhanced Task Creation -------------------
-with st.sidebar:
-    st.markdown(f"""
-    <div class="sidebar-section" style="text-align: center; color: white;">
-        <h3>👋 Welcome, {st.session_state['current_user'].title()}</h3>
-        <p>Data-Driven Productivity</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("### ➕ Create New Task")
-    
-    with st.form("task_form"):
-        title = st.text_input("📝 Task Title", placeholder="Enter task description...")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            priority = st.selectbox("🎯 Priority", [1,2,3,4,5], 
-                                  format_func=lambda x: f"🔴 Critical" if x==1 else f"🟡 High" if x==2 else f"🟢 Medium" if x==3 else f"🔵 Low" if x==4 else "⚫ Minimal")
-        with col2:
-            estimated_hours = st.number_input("⏱️ Est. Hours", min_value=0.5, max_value=40.0, step=0.5, value=1.0)
-            
-        tag = st.selectbox("🏷️ Category", 
-                          ["Data Analysis", "Visualization", "Research", "Reporting", "Learning", "Meeting", "Other"])
-        due_date = st.date_input("📅 Due Date", min_value=datetime.now().date())
-        
-        submitted = st.form_submit_button("🚀 Add Task", use_container_width=True)
-        
-        if submitted:
-            if title.strip():
-                try:
-                    df = st.session_state["tasks"]
-                    if not df.empty and len(df) > 0:
-                        duplicate_check = ((df["title"].str.lower() == title.lower()) & (df["priority"] == priority)).any()
-                    else:
-                        duplicate_check = False
-                        
-                    if duplicate_check:
-                        st.warning("⚠️ Similar task already exists!")
-                    else:
-                        task_id = str(datetime.now().timestamp()).replace(".", "")
-                        new_task = {
-                            "id": task_id,
-                            "title": title,
-                            "status": "To Do",
-                            "priority": priority,
-                            "tag": tag,
-                            "due_date": str(due_date),
-                            "created_at": datetime.now().isoformat(),
-                            "completed_at": "",
-                            "estimated_hours": estimated_hours,
-                            "actual_hours": 0
-                        }
-                        new_task_df = pd.DataFrame([new_task])
-                        st.session_state["tasks"] = pd.concat([df, new_task_df], ignore_index=True)
-                        save_tasks()
-                        st.success("✅ Task created successfully!")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Error adding task: {e}")
-            else:
-                st.warning("⚠️ Please enter a task title.")
-    
-    # Quick Stats in Sidebar
-    if not st.session_state["tasks"].empty:
-        df = st.session_state["tasks"]
-        st.markdown("### 📈 Quick Stats")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("📋 Total", len(df))
-            st.metric("✅ Done", len(df[df["status"]=="Done"]))
-        with col2:
-            completion_rate = len(df[df["status"]=="Done"]) / len(df) * 100 if len(df) > 0 else 0
-            st.metric("🎯 Rate", f"{completion_rate:.0f}%")
-            st.metric("⚡ Active", len(df[df["status"]!="Done"]))
-    
-    st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True):
-        st.session_state["logged_in"] = False
-        st.session_state["current_user"] = None
-        st.session_state["tasks"] = pd.DataFrame()
-        st.rerun()
+# ------------------- Main Content Area with Right Sidebar -------------------
+main_col, quote_col = st.columns([4, 1])
 
-# ------------------- Motivational Quote (Always visible in sidebar) -------------------
-with st.sidebar:
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-                padding: 1rem; 
-                border-radius: 10px; 
-                margin: 1rem 0; 
-                text-align: center; 
+with quote_col:
+    st.markdown("""
+    <div style="position: fixed; 
+                top: 100px; 
+                right: 20px; 
+                width: 250px; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 1.5rem; 
+                border-radius: 15px; 
                 color: white; 
-                font-weight: 600;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-        <div style="font-size: 0.9rem;">{random.choice(quotes)}</div>
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                z-index: 999;">
+        <h4 style="text-align: center; margin-bottom: 1rem; color: white;">✨ Daily Inspiration ✨</h4>
+        <div style="text-align: center; font-weight: 600; line-height: 1.4; margin-bottom: 1rem;">
+    """ + random.choice(quotes) + """
+        </div>
+        <div style="text-align: center; font-size: 0.8rem; opacity: 0.8;">
+            Refresh for new motivation! 🔄
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# ------------------- Enhanced Tabs -------------------
-tab1, tab2, tab3 = st.tabs(["📋 Kanban Board", "📊 Analytics Dashboard", "📈 Performance Insights"])
+with main_col:
+    # ------------------- Sidebar: Enhanced Task Creation -------------------
+    with st.sidebar:
+    
+        st.markdown(f"""
+        <div class="sidebar-section" style="text-align: center; color: white;">
+            <h3>👋 Welcome, {st.session_state['current_user'].title()}</h3>
+            <p>Data-Driven Productivity</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### ➕ Create New Task")
+    
+        with st.form("task_form"):
+            title = st.text_input("📝 Task Title", placeholder="Enter task description...")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                priority = st.selectbox("🎯 Priority", [1,2,3,4,5], 
+                                      format_func=lambda x: f"🔴 Critical" if x==1 else f"🟡 High" if x==2 else f"🟢 Medium" if x==3 else f"🔵 Low" if x==4 else "⚫ Minimal")
+            with col2:
+                estimated_hours = st.number_input("⏱️ Est. Hours", min_value=0.5, max_value=40.0, step=0.5, value=1.0)
+                
+            tag = st.selectbox("🏷️ Category", 
+                              ["Data Analysis", "Visualization", "Research", "Reporting", "Learning", "Meeting", "Other"])
+            due_date = st.date_input("📅 Due Date", min_value=datetime.now().date())
+            
+            submitted = st.form_submit_button("🚀 Add Task", use_container_width=True)
+            
+            if submitted:
+                if title.strip():
+                    try:
+                        df = st.session_state["tasks"]
+                        if not df.empty and len(df) > 0:
+                            duplicate_check = ((df["title"].str.lower() == title.lower()) & (df["priority"] == priority)).any()
+                        else:
+                            duplicate_check = False
+                            
+                        if duplicate_check:
+                            st.warning("⚠️ Similar task already exists!")
+                        else:
+                            task_id = str(datetime.now().timestamp()).replace(".", "")
+                            new_task = {
+                                "id": task_id,
+                                "title": title,
+                                "status": "To Do",
+                                "priority": priority,
+                                "tag": tag,
+                                "due_date": str(due_date),
+                                "created_at": datetime.now().isoformat(),
+                                "completed_at": "",
+                                "estimated_hours": estimated_hours,
+                                "actual_hours": 0
+                            }
+                            new_task_df = pd.DataFrame([new_task])
+                            st.session_state["tasks"] = pd.concat([df, new_task_df], ignore_index=True)
+                            save_tasks()
+                            st.success("✅ Task created successfully!")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Error adding task: {e}")
+                else:
+                    st.warning("⚠️ Please enter a task title.")
+        
+        # Quick Stats in Sidebar
+        if not st.session_state["tasks"].empty:
+            df = st.session_state["tasks"]
+            st.markdown("### 📈 Quick Stats")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("📋 Total", len(df))
+                st.metric("✅ Done", len(df[df["status"]=="Done"]))
+            with col2:
+                completion_rate = len(df[df["status"]=="Done"]) / len(df) * 100 if len(df) > 0 else 0
+                st.metric("🎯 Rate", f"{completion_rate:.0f}%")
+                st.metric("⚡ Active", len(df[df["status"]!="Done"]))
+        
+        st.markdown("---")
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state["logged_in"] = False
+            st.session_state["current_user"] = None
+            st.session_state["tasks"] = pd.DataFrame()
+            st.rerun()
+    
+    # ------------------- Enhanced Tabs -------------------
+    tab1, tab2, tab3 = st.tabs(["📋 Kanban Board", "📊 Analytics Dashboard", "📈 Performance Insights"])
 
 # ------------------- Enhanced Task Board -------------------
 status_order = ["To Do", "In Progress", "Done"]
