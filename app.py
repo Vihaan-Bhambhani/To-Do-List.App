@@ -191,16 +191,18 @@ with tab_list:
                     st.rerun()
             with cols[2]:
                 if st.button("🗑 Delete", key=f"del_{row['id']}"):
-                    if pd.notna(row['id']):
+                    try:
+                        task_id = int(row['id'])
                         conn = get_conn()
                         c = conn.cursor()
-                        c.execute("DELETE FROM tasks WHERE id=?", (int(row['id']),))
+                        c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
                         conn.commit()
                         conn.close()
-                        st.success("Deleted")
+                        st.success("Deleted successfully ✅")
                         st.rerun()
-                    else:
+                    except (ValueError, TypeError):
                         st.error("⚠️ Could not delete this task (invalid ID).")
+
             with cols[3]:
                 st.write("")
 
