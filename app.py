@@ -1,7 +1,7 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from datetime import datetime, date, timedelta
+from datetime import datetime
 import uuid
 
 DB_FILE = "tasks.db"
@@ -23,7 +23,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-def add_task(title, status="To Do", priority=2, due_date=""):
+def add_task(title, status="To Do", priority=3, due_date=""):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     tid = str(uuid.uuid4())
@@ -56,52 +56,83 @@ def fetch_tasks():
 # ---------------- Streamlit UI ----------------
 st.set_page_config(page_title="📝 To-Do List", page_icon="✅", layout="wide")
 
-st.title("📝 To-Do List App")
-st.caption("A simple but polished Streamlit app — powered by SQLite.")
+st.title("✅ Smart To-Do List")
+st.caption("Polished, simple & recruiter-friendly — built with Streamlit + SQLite.")
 
 init_db()
 
 # Sidebar: Add task
-st.sidebar.header("Add Task")
+st.sidebar.header("➕ Add New Task")
 title = st.sidebar.text_input("Task")
-priority = st.sidebar.selectbox("Priority", [1, 2, 3], index=1)
+priority = st.sidebar.selectbox("Priority (1 = highest, 5 = lowest)", [1, 2, 3, 4, 5], index=2)
 due_date = st.sidebar.date_input("Due Date (optional)", value=None)
 
-if st.sidebar.button("Add"):
+if st.sidebar.button("Add Task"):
     if title.strip():
         due_str = due_date.isoformat() if due_date else ""
         add_task(title, "To Do", priority, due_str)
         st.sidebar.success("Task added!")
-        st.experimental_rerun()
+        st.rerun()  # FIXED: replaced experimental_rerun
+    else:
+        st.sidebar.warning("Please enter a task title!")
 
 # Main: Kanban board
 df = fetch_tasks()
 statuses = ["To Do", "In Progress", "Done"]
 cols = st.columns(3)
 
+priority_colors = {
+    1: "🔴 Urgent",
+    2: "🟠 High",
+    3: "🟡 Medium",
+    4: "🔵 Low",
+    5: "🟢 Very Low"
+}
+
 for i, status in enumerate(statuses):
     with cols[i]:
         st.subheader(f"{status}")
         tasks = df[df["status"] == status]
+        if tasks.empty:
+            st.info("No tasks here 👌")
         for _, row in tasks.iterrows():
-            with st.expander(f"{row['title']} (P{row['priority']})"):
-                st.write(f"Due: {row['due_date'] or '—'}")
-                if st.button("➡ Move", key=f"mv{row['id']}"):
-                    next_status = (
-                        "In Progress" if status == "To Do"
-                        else "Done" if status == "In Progress"
-                        else "To Do"
-                    )
-                    update_status(row['id'], next_status)
-                    st.experimental_rerun()
-                if st.button("🗑 Delete", key=f"del{row['id']}"):
-                    delete_task(row['id'])
-                    st.experimental_rerun()
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div style='padding:10px; border-radius:10px; margin-bottom:10px;
+                                background: #f9f9f9; border:1px solid #ddd;'>
+                        <b>{row['title']}</b><br>
+                        Priority: {priority_colors.get(row['priority'], row['priority'])}<br>
+                        Due: {row['due_date'] or '—'}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    if st.button("➡ Move", key=f"mv{row['id']}"):
+                        next_status = (
+                            "In Progress" if status == "To Do"
+                            else "Done" if status == "In Progress"
+                            else "To Do"
+                        )
+                        update_status(row['id'], next_status)
+                        st.rerun()
+                with c2:
+                    if st.button("🗑 Delete", key=f"del{row['id']}"):
+                        delete_task(row['id'])
+                        st.rerun()
 
-# Bottom: Progress
+# Bottom: Progress tracker
 st.markdown("---")
 total = len(df)
 done = len(df[df["status"] == "Done"])
 progress = int((done / total) * 100) if total else 0
 st.metric("Tasks Done", f"{done}/{total}")
 st.progress(progress/100 if total else 0)
+
+if progress == 100 and total > 0:
+    st.success("🎉 All tasks completed! Fantastic work!")
+elif progress >= 50:
+    st.info("🚀 You're more than halfway there!")
+
