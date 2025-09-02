@@ -152,13 +152,17 @@ def validate_user(username, password):
 
 # ------------------- Enhanced Motivational Quotes -------------------
 quotes = [
+    "🚀 Small steps every day lead to big results.",
+    "🔥 Stay focused, the hard work will pay off.",
+    "🌟 Progress, not perfection.",
+    "💡 Every task you complete builds momentum.",
+    "⏳ Don't wait for inspiration, create it.",
+    "🏆 Winners are ordinary people with extraordinary consistency.",
     "📊 Data tells a story - make yours compelling!",
     "🔍 In data we trust, in analysis we excel.",
     "📈 Turn insights into impact, one task at a time.",
-    "💡 Every dataset holds hidden opportunities.",
     "🎯 Precision in analysis, excellence in execution.",
     "⚡ Transform raw data into strategic decisions.",
-    "🚀 Your analytical skills are your superpower!",
     "🧠 Think like an analyst, act like a leader.",
 ]
 
