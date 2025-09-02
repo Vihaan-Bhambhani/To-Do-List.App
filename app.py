@@ -24,7 +24,7 @@ def init_db():
         due_date TEXT
     )
     """)
-    # schema migration (add missing cols)
+    # schema migration (add missing cols if old DB exists)
     existing_cols = [row[1] for row in c.execute("PRAGMA table_info(tasks)")]
     if "tag" not in existing_cols:
         c.execute("ALTER TABLE tasks ADD COLUMN tag TEXT")
@@ -87,10 +87,10 @@ st.markdown("---")
 init_db()
 
 # --------------------------
-# ADD NEW TASK
+# SIDEBAR: ADD NEW TASK
 # --------------------------
-with st.form("new_task_form", clear_on_submit=True):
-    st.subheader("➕ Add a new task")
+st.sidebar.header("➕ Add a new task")
+with st.sidebar.form("new_task_form", clear_on_submit=True):
     title = st.text_input("Task")
     priority = st.slider("Priority (1 = Low, 5 = High)", 1, 5, 3)
     tag = st.text_input("Tag (optional)")
@@ -98,14 +98,13 @@ with st.form("new_task_form", clear_on_submit=True):
     submitted = st.form_submit_button("Add Task")
     if submitted and title.strip():
         add_task(title.strip(), priority, tag, due_date.strftime("%Y-%m-%d") if due_date else "")
-        st.success("Task added!")
+        st.sidebar.success("Task added!")
         st.rerun()
 
 # --------------------------
-# DISPLAY TASKS
+# MAIN TABS
 # --------------------------
 df = get_tasks()
-
 tab1, tab2, tab3 = st.tabs(["📋 List View", "🗂 Kanban Board", "📊 Analytics"])
 
 # --- List View ---
@@ -163,15 +162,16 @@ with tab3:
     if df.empty:
         st.info("No data to analyze yet.")
     else:
-        # Completion rate
         total = len(df)
         done = len(df[df["status"]=="Done"])
         st.metric("✅ Completion Rate", f"{(done/total*100):.1f}%")
-        
-        # Task distribution by status
+
         st.subheader("Task Status Distribution")
         st.bar_chart(df["status"].value_counts())
 
-        # Tasks by priority
         st.subheader("Tasks by Priority")
         st.bar_chart(df["priority"].value_counts().sort_index())
+
+        st.subheader("Tasks by Tag")
+        tag_counts = df["tag"].fillna("Untagged").replace("", "Untagged").value_counts()
+        st.bar_chart(tag_counts)
