@@ -66,18 +66,18 @@ quotes = [
 
 # ------------------- Login/Register Page -------------------
 if not st.session_state["logged_in"]:
-    container = st.container()
-    with container:
-        st.markdown("<h1 style='text-align:center'>🧠 Login / Register</h1>", unsafe_allow_html=True)
-        action = st.radio("Action:", ["Login", "Register"], horizontal=True)
+    st.markdown("<h1 style='text-align:center'>🧠 Login / Register</h1>", unsafe_allow_html=True)
+    action = st.radio("Action:", ["Login", "Register"], horizontal=True)
+
+    with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         confirm_password = ""
         if action == "Register":
             confirm_password = st.text_input("Confirm Password", type="password")
-        submit = st.button("Submit")
+        submitted = st.form_submit_button("Submit")
 
-        if submit:
+        if submitted:
             if not username.strip() or not password:
                 st.warning("⚠️ Enter both username and password.")
             elif action == "Register" and password != confirm_password:
@@ -91,6 +91,7 @@ if not st.session_state["logged_in"]:
                 st.session_state["current_user"] = username.lower()
                 st.session_state["logged_in"] = True
                 st.success(f"✅ User '{username}' registered and logged in!")
+                st.experimental_rerun()
             elif action == "Login":
                 result = validate_user(username, password)
                 if result == "not_registered":
@@ -101,6 +102,7 @@ if not st.session_state["logged_in"]:
                     st.session_state["current_user"] = username.lower()
                     st.session_state["logged_in"] = True
                     st.success(f"✅ User '{username}' logged in!")
+                    st.experimental_rerun()
 
 # ------------------- Main App -------------------
 if st.session_state["logged_in"]:
