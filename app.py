@@ -155,14 +155,18 @@ with tab2:
                 st.subheader(status)
                 for _, row in df[df["status"] == status].iterrows():
                     # format due date
+                    # format due date
                     due = "-"
                     if row["due_date"]:
                         try:
                             due = pd.to_datetime(row["due_date"]).strftime("%b %d, %Y")
                         except:
                             due = row["due_date"]
-
-                    # build task card with dark text
+                    
+                    # optional category line (only if tag exists)
+                    category_line = f"📂 Category: {row['tag']}<br>" if row["tag"] else ""
+                    
+                    # build task card
                     st.markdown(
                         f"""
                         <div style="
@@ -174,13 +178,12 @@ with tab2:
                             box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
                             <b>✅ {row['title']}</b><br>
                             🔢 Priority: <b>{row['priority']}</b><br>
-                            🏷 {row['tag'] if row['tag'] else '-'}<br>
+                            {category_line}
                             📅 {due}
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
-
 
 
 # --- Analytics View ---
