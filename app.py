@@ -14,57 +14,75 @@ def get_conn():
     return sqlite3.connect(DB_FILE, check_same_thread=False)
 
 def init_db():
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id TEXT PRIMARY KEY,
-            title TEXT,
-            status TEXT,
-            priority INTEGER,
-            tag TEXT,
-            due_date TEXT,
-            created_at TEXT,
-            completed_at TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                status TEXT,
+                priority INTEGER,
+                tag TEXT,
+                due_date TEXT,
+                created_at TEXT,
+                completed_at TEXT
+            )
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Database initialization failed: {e}")
 
 def add_task(title, priority, tag, due_date):
-    conn = get_conn()
-    c = conn.cursor()
-    # use timestamp as unique ID (avoids int/UUID mismatch)
-    task_id = str(datetime.now().timestamp()).replace(".", "")
-    c.execute(
-        "INSERT INTO tasks (id, title, status, priority, tag, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (task_id, title, "To Do", priority, tag, due_date, datetime.now().isoformat())
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        task_id = str(datetime.now().timestamp()).replace(".", "")  # unique string ID
+        c.execute(
+            "INSERT INTO tasks (id, title, status, priority, tag, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (task_id, title, "To Do", priority, tag, due_date, datetime.now().isoformat())
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Could not add task: {e}")
 
 def update_status(task_id, new_status):
-    conn = get_conn()
-    c = conn.cursor()
-    if new_status == "Done":
-        c.execute("UPDATE tasks SET status=?, completed_at=? WHERE id=?", (new_status, datetime.now().isoformat(), task_id))
-    else:
-        c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, task_id))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        if new_status == "Done":
+            c.execute(
+                "UPDATE tasks SET status=?, completed_at=? WHERE id=?",
+                (new_status, datetime.now().isoformat(), task_id)
+            )
+        else:
+            c.execute("UPDATE tasks SET status=? WHERE id=?", (new_status, task_id))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Could not update status: {e}")
 
 def delete_task(task_id):
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("DELETE FROM tasks WHERE id=?", (task_id,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        st.error(f"⚠️ Could not delete task: {e}")
 
 def get_tasks():
-    conn = get_conn()
-    df = pd.read_sql("SELECT * FROM tasks", conn)
-    conn.close()
-    return df
+    try:
+        conn = get_conn()
+        df = pd.read_sql("SELECT * FROM tasks", conn)
+        conn.close()
+        return df
+    except Exception as e:
+        st.error(f"⚠️ Could not fetch tasks: {e}")
+        return pd.DataFrame()
 
 # -----------------------
 # UI Config
@@ -75,7 +93,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize DB
 init_db()
 
 # Motivational Quotes (A/B Testing)
@@ -121,7 +138,7 @@ with st.sidebar:
             st.success("Task added ✅")
             st.rerun()
         else:
-            st.warning("Task title cannot be empty.")
+            st.warning("⚠️ Task title cannot be empty.")
 
 # -----------------------
 # Main Tabs
@@ -139,26 +156,29 @@ with tab1:
         st.info("No tasks yet. Add one from the sidebar ➡️")
     else:
         for _, row in df.iterrows():
-            col1, col2, col3 = st.columns([4, 2, 1])
-            with col1:
-                st.write(f"**{row['title']}** (Priority {row['priority']})")
-            with col2:
-                new_status = st.selectbox(
-                    "Status",
-                    ["To Do", "In Progress", "Done"],
-                    index=["To Do", "In Progress", "Done"].index(row["status"]),
-                    key=f"status_{row['id']}"
-                )
-                if new_status != row["status"]:
-                    update_status(row["id"], new_status)
-                    if new_status == "Done":
-                        st.balloons()
-                    st.rerun()
-            with col3:
-                if st.button("🗑", key=f"del_{row['id']}"):
-                    delete_task(row["id"])
-                    st.success("Deleted ✅")
-                    st.rerun()
+            try:
+                col1, col2, col3 = st.columns([4, 2, 1])
+                with col1:
+                    st.write(f"**{row['title']}** (Priority {row['priority']})")
+                with col2:
+                    new_status = st.selectbox(
+                        "Status",
+                        ["To Do", "In Progress", "Done"],
+                        index=["To Do", "In Progress", "Done"].index(row["status"]),
+                        key=f"status_{row['id']}"
+                    )
+                    if new_status != row["status"]:
+                        update_status(row["id"], new_status)
+                        if new_status == "Done":
+                            st.balloons()
+                        st.rerun()
+                with col3:
+                    if st.button("🗑", key=f"del_{row['id']}"):
+                        delete_task(row["id"])
+                        st.success("Deleted ✅")
+                        st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ Problem displaying a task: {e}")
 
     # Kanban View
     st.subheader("🗂 Kanban Board")
@@ -170,32 +190,35 @@ with tab1:
         with cols[i]:
             st.markdown(f"### {status}")
             for _, row in df[df["status"] == status].iterrows():
-                due = "-"
-                if row["due_date"]:
-                    try:
-                        due = pd.to_datetime(row["due_date"]).strftime("%b %d, %Y")
-                    except:
-                        due = row["due_date"]
+                try:
+                    due = "-"
+                    if row["due_date"]:
+                        try:
+                            due = pd.to_datetime(row["due_date"]).strftime("%b %d, %Y")
+                        except:
+                            due = row["due_date"]
 
-                category_line = f"📂 Category: {row['tag']}<br>" if row["tag"] else ""
+                    category_line = f"📂 Category: {row['tag']}<br>" if row["tag"] else ""
 
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color:{colors[status]};
-                        color:#000000; 
-                        padding:12px; 
-                        border-radius:10px; 
-                        margin-bottom:10px;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-                        <b>✅ {row['title']}</b><br>
-                        🔢 Priority: <b>{row['priority']}</b><br>
-                        {category_line}
-                        📅 {due}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color:{colors[status]};
+                            color:#000000; 
+                            padding:12px; 
+                            border-radius:10px; 
+                            margin-bottom:10px;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            <b>✅ {row['title']}</b><br>
+                            🔢 Priority: <b>{row['priority']}</b><br>
+                            {category_line}
+                            📅 {due}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                except Exception as e:
+                    st.error(f"⚠️ Problem rendering Kanban card: {e}")
 
 # -----------------------
 # Tab 2: Analytics
@@ -207,49 +230,52 @@ with tab2:
     if df.empty:
         st.info("No tasks available to analyze.")
     else:
-        if "completed_at" not in df.columns:
-            df["completed_at"] = None
-        df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
-        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        try:
+            if "completed_at" not in df.columns:
+                df["completed_at"] = None
+            df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
+            df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
 
-        completion_rate = (df["status"] == "Done").mean() * 100
-        st.metric("✅ Completion Rate", f"{completion_rate:.1f}%")
+            completion_rate = (df["status"] == "Done").mean() * 100
+            st.metric("✅ Completion Rate", f"{completion_rate:.1f}%")
 
-        done_tasks = df[df["status"] == "Done"].dropna(subset=["completed_at", "created_at"])
-        if not done_tasks.empty:
-            avg_time = (done_tasks["completed_at"] - done_tasks["created_at"]).mean()
-            st.metric("⏱ Avg Completion Time", str(avg_time).split(".")[0])
-        else:
-            st.write("⏱ No completed tasks yet.")
+            done_tasks = df[df["status"] == "Done"].dropna(subset=["completed_at", "created_at"])
+            if not done_tasks.empty:
+                avg_time = (done_tasks["completed_at"] - done_tasks["created_at"]).mean()
+                st.metric("⏱ Avg Completion Time", str(avg_time).split(".")[0])
+            else:
+                st.write("⏱ No completed tasks yet.")
 
-        st.write("### Tasks by Priority")
-        conn = get_conn()
-        query1 = "SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority"
-        st.code(query1, language="sql")
-        df_priority = pd.read_sql(query1, conn)
-        conn.close()
-        fig, ax = plt.subplots()
-        ax.bar(df_priority["priority"], df_priority["count"])
-        ax.set_xlabel("Priority")
-        ax.set_ylabel("Number of Tasks")
-        st.pyplot(fig)
-
-        st.write("### Tasks by Category")
-        conn = get_conn()
-        query2 = "SELECT tag, COUNT(*) as count FROM tasks GROUP BY tag"
-        st.code(query2, language="sql")
-        df_tag = pd.read_sql(query2, conn)
-        conn.close()
-        fig, ax = plt.subplots()
-        ax.bar(df_tag["tag"], df_tag["count"])
-        ax.set_xlabel("Category")
-        ax.set_ylabel("Number of Tasks")
-        st.pyplot(fig)
-
-        st.write("### Weekly Completion Trend")
-        if not done_tasks.empty:
-            trend = done_tasks.groupby(done_tasks["completed_at"].dt.to_period("W")).size()
+            st.write("### Tasks by Priority")
+            conn = get_conn()
+            query1 = "SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority"
+            st.code(query1, language="sql")
+            df_priority = pd.read_sql(query1, conn)
+            conn.close()
             fig, ax = plt.subplots()
-            trend.plot(kind="line", ax=ax, marker="o")
-            ax.set_ylabel("Completed Tasks")
+            ax.bar(df_priority["priority"], df_priority["count"])
+            ax.set_xlabel("Priority")
+            ax.set_ylabel("Number of Tasks")
             st.pyplot(fig)
+
+            st.write("### Tasks by Category")
+            conn = get_conn()
+            query2 = "SELECT tag, COUNT(*) as count FROM tasks GROUP BY tag"
+            st.code(query2, language="sql")
+            df_tag = pd.read_sql(query2, conn)
+            conn.close()
+            fig, ax = plt.subplots()
+            ax.bar(df_tag["tag"], df_tag["count"])
+            ax.set_xlabel("Category")
+            ax.set_ylabel("Number of Tasks")
+            st.pyplot(fig)
+
+            st.write("### Weekly Completion Trend")
+            if not done_tasks.empty:
+                trend = done_tasks.groupby(done_tasks["completed_at"].dt.to_period("W")).size()
+                fig, ax = plt.subplots()
+                trend.plot(kind="line", ax=ax, marker="o")
+                ax.set_ylabel("Completed Tasks")
+                st.pyplot(fig)
+        except Exception as e:
+            st.error(f"⚠️ Analytics error: {e}")
