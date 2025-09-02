@@ -12,6 +12,7 @@ DB_FILE = "tasks.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
+    # Create table if not exists
     c.execute("""
     CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
@@ -23,6 +24,14 @@ def init_db():
         due_date TEXT
     )
     """)
+    # Ensure new columns exist (migration)
+    existing_cols = [row[1] for row in c.execute("PRAGMA table_info(tasks)")]
+    if "priority" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 3")
+    if "tag" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN tag TEXT DEFAULT ''")
+    if "due_date" not in existing_cols:
+        c.execute("ALTER TABLE tasks ADD COLUMN due_date TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -127,7 +136,12 @@ with tab1:
     if df.empty:
         st.info("No tasks yet.")
     else:
-        st.dataframe(df[["title","status","priority","tag","due_date"]])
+        # Backward compatibility: fill missing columns
+        expected_cols = ["title","status","priority","tag","due_date"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = ""
+        st.dataframe(df[expected_cols])
 
 # --- Kanban View ---
 with tab2:
@@ -237,6 +251,3 @@ with tab4:
             st.write(f"Best Streak: {max_streak} days")
         else:
             st.info("No completed tasks yet.")
-
-
-
