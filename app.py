@@ -18,8 +18,8 @@ if "current_user" not in st.session_state:
     st.session_state["current_user"] = None
 if "task_message" not in st.session_state:
     st.session_state["task_message"] = ""
-if "auth_action" not in st.session_state:
-    st.session_state["auth_action"] = "login"
+if "rerun_needed" not in st.session_state:
+    st.session_state["rerun_needed"] = False
 
 # ------------------- Users CSV -------------------
 USERS_FILE = "users.csv"
@@ -142,6 +142,7 @@ if st.session_state["current_user"] is not None:
         df = pd.concat([df,new_task],ignore_index=True)
         save_tasks(df)
         st.session_state["task_message"] = "✅ Task added"
+        st.session_state["rerun_needed"] = True
 
     def update_status(task_id, new_status):
         df = get_tasks()
@@ -154,12 +155,14 @@ if st.session_state["current_user"] is not None:
             df.at[idx,"completed_at"] = datetime.now().isoformat()
         save_tasks(df)
         st.session_state["task_message"] = f"✅ Task '{df.at[idx,'title']}' status updated to {new_status}"
+        st.session_state["rerun_needed"] = True
 
     def delete_task(task_id):
         df = get_tasks()
         df = df[df["id"] != task_id]
         save_tasks(df)
         st.session_state["task_message"] = "🗑️ Task deleted"
+        st.session_state["rerun_needed"] = True
 
     # ------------------- Initialize User File -------------------
     init_user_file()
@@ -193,6 +196,11 @@ if st.session_state["current_user"] is not None:
         """,
         unsafe_allow_html=True,
     )
+
+    # ------------------- Safe rerun -------------------
+    if st.session_state.get("rerun_needed"):
+        st.session_state["rerun_needed"] = False
+        st.experimental_rerun()
 
     # ------------------- Tabs -------------------
     tab1, tab2 = st.tabs(["📋 Task Board","📊 Analytics"])
