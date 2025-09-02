@@ -158,12 +158,12 @@ quotes = [
     "💡 Every task you complete builds momentum.",
     "⏳ Don't wait for inspiration, create it.",
     "🏆 Winners are ordinary people with extraordinary consistency.",
-    "📊 Data tells a story - make yours compelling!",
-    "🔍 In data we trust, in analysis we excel.",
-    "📈 Turn insights into impact, one task at a time.",
-    "🎯 Precision in analysis, excellence in execution.",
-    "⚡ Transform raw data into strategic decisions.",
-    "🧠 Think like an analyst, act like a leader.",
+    "🎯 Focus on what matters most today.",
+    "⚡ You've got this - one task at a time.",
+    "📈 Small wins lead to big victories.",
+    "🎊 Celebrate progress, no matter how small.",
+    "✨ Make it happen, step by step.",
+    "🌈 Every completed task is a step forward.",
 ]
 
 # ------------------- Login/Register -------------------
@@ -390,8 +390,8 @@ with tab1:
         if df.empty:
             st.markdown("""
             <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white;">
-                <h2>🚀 Ready to showcase your analytical skills?</h2>
-                <p>Start by creating your first task in the sidebar!</p>
+                <h2>✨ Time to get things done!</h2>
+                <p>Add your first task from the sidebar and start building momentum.</p>
             </div>
             """, unsafe_allow_html=True)
         else:
