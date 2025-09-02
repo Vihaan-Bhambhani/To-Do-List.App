@@ -91,7 +91,6 @@ if not st.session_state["logged_in"]:
                 st.session_state["current_user"] = username.lower()
                 st.session_state["logged_in"] = True
                 st.success(f"✅ User '{username}' registered and logged in!")
-                st.experimental_rerun()
             elif action == "Login":
                 result = validate_user(username, password)
                 if result == "not_registered":
@@ -102,7 +101,6 @@ if not st.session_state["logged_in"]:
                     st.session_state["current_user"] = username.lower()
                     st.session_state["logged_in"] = True
                     st.success(f"✅ User '{username}' logged in!")
-                    st.experimental_rerun()
 
 # ------------------- Main App -------------------
 if st.session_state["logged_in"]:
