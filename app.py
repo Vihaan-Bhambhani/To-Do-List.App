@@ -17,7 +17,7 @@ def migrate_db():
     conn = get_conn()
     c = conn.cursor()
 
-    # Ensure table exists
+    # Ensure table exists with integer ID
     c.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,12 +32,14 @@ def migrate_db():
     """)
     conn.commit()
 
-    # Check if "id" column exists (migration for old DBs)
+    # Check if ID column is not integer
     c.execute("PRAGMA table_info(tasks)")
-    cols = [row[1] for row in c.fetchall()]
-    if "id" not in cols:
-        # Migrate old table
+    cols = c.fetchall()
+    id_col = [col for col in cols if col[1] == "id"]
+    if id_col and id_col[0][2].lower() != "integer":
+        # Backup old table
         c.execute("ALTER TABLE tasks RENAME TO tasks_old")
+        # Create fresh tasks table with correct schema
         c.execute("""
             CREATE TABLE tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +52,7 @@ def migrate_db():
                 completed_at TEXT
             )
         """)
+        # Copy old data (auto-generate new IDs)
         c.execute("""
             INSERT INTO tasks (title, status, priority, tag, due_date, created_at, completed_at)
             SELECT title, status, priority, tag, due_date, created_at, completed_at
@@ -98,7 +101,11 @@ def get_tasks():
 # -----------------------
 # UI Config
 # -----------------------
-st.set_page_config(page_title="To-Do List App", page_icon="🗂", layout="wide")
+st.set_page_config(
+    page_title="Data Analyst To-Do List",
+    page_icon="🧠",   # Clean favicon instead of weird Streamlit logo
+    layout="wide"
+)
 
 # Motivational Quotes (A/B Testing)
 quotes_a = [
@@ -177,18 +184,10 @@ with tab1:
                         st.balloons()
                     st.rerun()
             with col3:
-                task_id = row.get("id", None)
-                if pd.notna(task_id):
-                    if st.button("🗑", key=f"del_{task_id}"):
-                        try:
-                            delete_task(int(task_id))
-                            st.success(f"Deleted '{row['title']}' ✅")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"⚠️ Could not delete this task: {e}")
-                else:
-                    st.caption("⚠️ Invalid Task (no ID)")
-
+                if st.button("🗑", key=f"del_{row['id']}"):
+                    delete_task(int(row["id"]))
+                    st.success("Deleted ✅")
+                    st.rerun()
 
     # Kanban View
     st.subheader("🗂 Kanban Board")
@@ -237,17 +236,14 @@ with tab2:
     if df.empty:
         st.info("No tasks available to analyze.")
     else:
-        # Ensure completed_at exists
         if "completed_at" not in df.columns:
             df["completed_at"] = None
         df["completed_at"] = pd.to_datetime(df["completed_at"], errors="coerce")
         df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
 
-        # Completion Rate
         completion_rate = (df["status"] == "Done").mean() * 100
         st.metric("✅ Completion Rate", f"{completion_rate:.1f}%")
 
-        # Avg Completion Time
         done_tasks = df[df["status"] == "Done"].dropna(subset=["completed_at", "created_at"])
         if not done_tasks.empty:
             avg_time = (done_tasks["completed_at"] - done_tasks["created_at"]).mean()
@@ -255,7 +251,6 @@ with tab2:
         else:
             st.write("⏱ No completed tasks yet.")
 
-        # Priority Distribution
         st.write("### Tasks by Priority")
         conn = get_conn()
         query1 = "SELECT priority, COUNT(*) as count FROM tasks GROUP BY priority"
@@ -268,7 +263,6 @@ with tab2:
         ax.set_ylabel("Number of Tasks")
         st.pyplot(fig)
 
-        # Category Distribution
         st.write("### Tasks by Category")
         conn = get_conn()
         query2 = "SELECT tag, COUNT(*) as count FROM tasks GROUP BY tag"
@@ -281,7 +275,6 @@ with tab2:
         ax.set_ylabel("Number of Tasks")
         st.pyplot(fig)
 
-        # Weekly Trend
         st.write("### Weekly Completion Trend")
         if not done_tasks.empty:
             trend = done_tasks.groupby(done_tasks["completed_at"].dt.to_period("W")).size()
