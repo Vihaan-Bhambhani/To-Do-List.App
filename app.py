@@ -524,11 +524,14 @@ with tab1:
                                         "Actual hours (enter the time you really spent)",
                                         min_value=0.1,
                                         max_value=50.0,
-                                        value=float(row['actual_hours']) if pd.notna(row['actual_hours']) and row['actual_hours'] > 0 else 0.1,
+                                        value=float(row['actual_hours']) if pd.notna(row['actual_hours']) and row['actual_hours'] > 0 else None,
                                         step=0.1,
-                                        key=f"hours_{row['id']}"
+                                        key=f"hours_{row['id']}",
+                                        placeholder="Enter actual hours"
                                     )
-                                    if actual_hours != row['actual_hours']:
+                                    if actual_hours is not None and (
+                                        pd.isna(row['actual_hours']) or actual_hours != row['actual_hours']
+                                    ):
                                         st.session_state["tasks"].loc[df["id"]==row["id"], "actual_hours"] = actual_hours
                                         save_tasks()
                                         st.rerun()
