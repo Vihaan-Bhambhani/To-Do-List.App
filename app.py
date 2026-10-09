@@ -1,19 +1,15 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import random
 from datetime import datetime, timedelta
 import os
 import hashlib
-import numpy as np
 
 # ------------------- Page Config -------------------
 st.set_page_config(
-    page_title="Data Analyst Portfolio - Task Management System",
+    page_title="Task Manager & Productivity Analytics",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -215,7 +211,7 @@ def login_register():
             confirm_password = ""
             if action == "Register":
                 confirm_password = st.text_input("🔑 Confirm Password", type="password", placeholder="Confirm your password")
-            submitted = st.form_submit_button("🚀 " + action, use_container_width=True)
+            submitted = st.form_submit_button("🚀 " + action, width="stretch")
             
             if submitted:
                 if not username.strip() or not password:
@@ -358,7 +354,7 @@ with main_col:
                               ["Data Analysis", "Visualization", "Research", "Reporting", "Learning", "Meeting", "Other"])
             due_date = st.date_input("📅 Due Date", min_value=datetime.now().date())
             
-            submitted = st.form_submit_button("🚀 Add Task", use_container_width=True)
+            submitted = st.form_submit_button("🚀 Add Task", width="stretch")
             
             if submitted:
                 if title.strip():
@@ -409,7 +405,7 @@ with main_col:
                 st.metric("⚡ Active", len(df[df["status"]!="Done"]))
         
         st.markdown("---")
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", width="stretch"):
             st.session_state["logged_in"] = False
             st.session_state["current_user"] = None
             st.session_state["tasks"] = pd.DataFrame()
@@ -511,22 +507,21 @@ with tab1:
                                     st.session_state["tasks"].loc[df["id"]==row["id"], "status"] = new_status
                                     if new_status == "Done":
                                         st.session_state["tasks"].loc[df["id"]==row["id"], "completed_at"] = datetime.now().isoformat()
-                                        # Auto-set actual hours to estimated if not already set
-                                        if pd.isna(row['actual_hours']) or row['actual_hours'] == 0:
-                                            st.session_state["tasks"].loc[df["id"]==row["id"], "actual_hours"] = est_hours
+                                    else:
+                                        # A reopened task should not remain in completion-trend data.
+                                        st.session_state["tasks"].loc[df["id"]==row["id"], "completed_at"] = ""
                                     save_tasks()
                                     st.rerun()
                             
                             with col2:
                                 if row["status"] == "Done":
                                     actual_hours = st.number_input(
-                                        "Actual Hours",
+                                        "Actual hours (enter the time you really spent)",
                                         min_value=0.1,
                                         max_value=50.0,
-                                        value=float(row['actual_hours']) if pd.notna(row['actual_hours']) and row['actual_hours'] > 0 else est_hours,
+                                        value=float(row['actual_hours']) if pd.notna(row['actual_hours']) and row['actual_hours'] > 0 else 0.1,
                                         step=0.1,
-                                        key=f"hours_{row['id']}",
-                                        label_visibility="collapsed"
+                                        key=f"hours_{row['id']}"
                                     )
                                     if actual_hours != row['actual_hours']:
                                         st.session_state["tasks"].loc[df["id"]==row["id"], "actual_hours"] = actual_hours
@@ -626,7 +621,7 @@ with tab2:
                 )
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
                 fig_pie.update_layout(height=400, showlegend=True)
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.plotly_chart(fig_pie, width="stretch")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             with col2:
@@ -644,7 +639,7 @@ with tab2:
                     title="Tasks by Priority Level"
                 )
                 fig_bar.update_layout(height=400, xaxis_title="Priority", yaxis_title="Number of Tasks")
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_bar, width="stretch")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             # Category Analysis
@@ -663,7 +658,7 @@ with tab2:
                 )
                 fig_donut.update_traces(textposition='inside', textinfo='percent+label')
                 fig_donut.update_layout(height=400)
-                st.plotly_chart(fig_donut, use_container_width=True)
+                st.plotly_chart(fig_donut, width="stretch")
                 st.markdown('</div>', unsafe_allow_html=True)
             
             with col2:
@@ -687,7 +682,7 @@ with tab2:
                             markers=True
                         )
                         fig_line.update_layout(height=400, xaxis_title="Date", yaxis_title="Tasks Completed")
-                        st.plotly_chart(fig_line, use_container_width=True)
+                        st.plotly_chart(fig_line, width="stretch")
                     else:
                         st.info("Complete some tasks to see the trend!")
                 except Exception as e:
@@ -755,7 +750,7 @@ with tab3:
                                 line=dict(color="gray", dash="dash"),
                             )
                             fig_accuracy.update_layout(height=400)
-                            st.plotly_chart(fig_accuracy, use_container_width=True)
+                            st.plotly_chart(fig_accuracy, width="stretch")
                         
                         st.markdown('</div>', unsafe_allow_html=True)
                     
@@ -792,7 +787,7 @@ with tab3:
                             }
                         ))
                         fig_gauge.update_layout(height=400)
-                        st.plotly_chart(fig_gauge, use_container_width=True)
+                        st.plotly_chart(fig_gauge, width="stretch")
                         st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Task completion pattern analysis
@@ -818,7 +813,7 @@ with tab3:
                             color_continuous_scale="viridis"
                         )
                         fig_weekday.update_layout(xaxis_title="Day", yaxis_title="Tasks Completed")
-                        st.plotly_chart(fig_weekday, use_container_width=True)
+                        st.plotly_chart(fig_weekday, width="stretch")
                 except Exception as e:
                     st.info("Complete more tasks to see weekly patterns!")
                 
@@ -877,7 +872,7 @@ with tab3:
                     data=df.to_csv(index=False),
                     file_name=f"task_analytics_{st.session_state['current_user']}_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    width="stretch"
                 )
             
             with col2:
@@ -893,7 +888,7 @@ with tab3:
                         data=completed_summary.to_csv(),
                         file_name=f"productivity_report_{st.session_state['current_user']}_{datetime.now().strftime('%Y%m%d')}.csv",
                         mime="text/csv",
-                        use_container_width=True
+                        width="stretch"
                     )
             
             with col3:
@@ -915,7 +910,7 @@ with tab3:
                     data=performance_df.to_csv(index=False),
                     file_name=f"kpi_dashboard_{st.session_state['current_user']}_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    width="stretch"
                 )
                 
     except Exception as e:
