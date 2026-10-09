@@ -1,3 +1,5 @@
+import html
+import re
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -217,6 +219,9 @@ def login_register():
                 if not username.strip() or not password:
                     st.warning("⚠️ Please enter both username and password.")
                     return False
+                elif not re.fullmatch(r"[A-Za-z0-9_-]{3,24}", username.strip()):
+                    st.warning("Use a username of 3–24 letters, numbers, underscores, or hyphens.")
+                    return False
                 elif action == "Register" and password != confirm_password:
                     st.warning("⚠️ Passwords do not match.")
                     return False
@@ -333,7 +338,7 @@ with main_col:
     
         st.markdown(f"""
         <div class="sidebar-section" style="text-align: center; color: white;">
-            <h3>👋 Welcome, {st.session_state['current_user'].title()}</h3>
+            <h3>👋 Welcome, {html.escape(st.session_state['current_user'].title())}</h3>
             <p>Data-Driven Productivity</p>
         </div>
         """, unsafe_allow_html=True)
@@ -458,7 +463,7 @@ with tab1:
                             
                             priority_emoji = "🔴" if row['priority'] == 1 else "🟡" if row['priority'] == 2 else "🟢" if row['priority'] == 3 else "🔵" if row['priority'] == 4 else "⚫"
                             
-                            task_tag = row['tag'] if pd.notna(row['tag']) and row['tag'] else 'General'
+                            task_tag = html.escape(str(row['tag'])) if pd.notna(row['tag']) and row['tag'] else 'General'
                             task_due = row['due_date'] if pd.notna(row['due_date']) else 'No date'
                             est_hours = row['estimated_hours'] if pd.notna(row['estimated_hours']) else 0
                             
@@ -474,7 +479,7 @@ with tab1:
                             
                             st.markdown(f"""
                             <div class="task-card {status_class}">
-                                <h4 style="margin: 0; color: {text_color};">{row['title']}</h4>
+                                <h4 style="margin: 0; color: {text_color};">{html.escape(str(row['title']))}</h4>
                                 <div style="margin: 0.5rem 0;">
                                     <span style="background: #34495e; color: white; padding: 0.2rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-right: 0.5rem;">
                                         {priority_emoji} P{row['priority']}
