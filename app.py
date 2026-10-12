@@ -309,29 +309,8 @@ load_tasks()
 # This section is now moved to after login check
 
 # ------------------- Main Content Area with Right Sidebar -------------------
-main_col, quote_col = st.columns([4, 1])
-
-with quote_col:
-    st.markdown("""
-    <div style="position: fixed; 
-                top: 100px; 
-                right: 20px; 
-                width: 250px; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                padding: 1.5rem; 
-                border-radius: 15px; 
-                color: white; 
-                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-                z-index: 999;">
-        <h4 style="text-align: center; margin-bottom: 1rem; color: white;">✨ Daily Inspiration ✨</h4>
-        <div style="text-align: center; font-weight: 600; line-height: 1.4; margin-bottom: 1rem;">
-    """ + random.choice(quotes) + """
-        </div>
-        <div style="text-align: center; font-size: 0.8rem; opacity: 0.8;">
-            Refresh for new motivation! 🔄
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# Keep the board at full width; inspiration is a compact sidebar expander below.
+main_col = st.container()
 
 with main_col:
     # ------------------- Sidebar: Enhanced Task Creation -------------------
@@ -410,6 +389,34 @@ with main_col:
                 st.metric("🎯 Rate", f"{completion_rate:.0f}%")
                 st.metric("⚡ Active", len(df[df["status"]!="Done"]))
         
+        # Compact inspiration panel: stays in the sidebar and never overlays the Kanban board.
+        if "daily_inspiration" not in st.session_state:
+            st.session_state["daily_inspiration"] = random.choice(quotes)
+
+        with st.expander("✨ Daily Inspiration", expanded=False):
+            st.markdown(f"""
+            <div style="
+                box-sizing: border-box;
+                width: 100%;
+                padding: 1rem;
+                border-radius: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                text-align: center;
+                overflow-wrap: anywhere;
+            ">
+                <div style="font-weight: 650; line-height: 1.45;">
+                    {html.escape(st.session_state["daily_inspiration"])}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.button("🔄 New inspiration", key="refresh_daily_inspiration", width="stretch"):
+                previous_quote = st.session_state["daily_inspiration"]
+                alternatives = [quote for quote in quotes if quote != previous_quote]
+                st.session_state["daily_inspiration"] = random.choice(alternatives or quotes)
+                st.rerun()
+
         st.markdown("---")
         if st.button("🚪 Logout", width="stretch"):
             st.session_state["logged_in"] = False
