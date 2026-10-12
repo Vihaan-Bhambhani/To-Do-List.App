@@ -118,9 +118,9 @@ def test_primary_workflow(page):
         click_button(page, "Add Task")
         expect(page.locator("body")).to_contain_text("QA synthetic task " + suffix)
         # Move it to Done and enter actual hours.
-        status = page.get_by_role("combobox").first
+        status = page.get_by_role("combobox").last
         status.click()
-        page.get_by_text("Done", exact=True).last.click()
+        page.get_by_role("option", name="Done", exact=True).click()
         expect(page.locator("body")).to_contain_text("Done")
         hours = page.get_by_label(re.compile("Actual hours", re.I)).last
         hours.fill("1.5")
