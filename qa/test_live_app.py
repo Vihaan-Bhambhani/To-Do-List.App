@@ -118,7 +118,7 @@ def test_primary_workflow(page):
         click_button(page, "Add Task")
         expect(page.locator("body")).to_contain_text("QA synthetic task " + suffix)
         # Move it to Done and enter actual hours.
-        status = page.get_by_label("Status").last
+        status = page.get_by_role("combobox").first
         status.click()
         page.get_by_text("Done", exact=True).last.click()
         expect(page.locator("body")).to_contain_text("Done")
