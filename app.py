@@ -43,6 +43,44 @@ st.markdown("""
         border-radius: 0 8px 8px 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         transition: transform 0.2s;
+        min-width: 0;
+    }
+    .task-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.45rem;
+        margin: 0.75rem 0;
+        min-width: 0;
+    }
+    .task-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        word-break: keep-all;
+        line-height: 1.3;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        margin: 0;
+    }
+    .inspiration-strip {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.7rem 0.95rem;
+        border-radius: 12px;
+        background: linear-gradient(100deg, rgba(102,126,234,0.18), rgba(118,75,162,0.18));
+        border: 1px solid rgba(135,120,220,0.28);
+        min-height: 44px;
+    }
+    .inspiration-strip-text {
+        font-size: 0.94rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
     }
     .task-card:hover {
         transform: translateY(-2px);
@@ -389,34 +427,6 @@ with main_col:
                 st.metric("🎯 Rate", f"{completion_rate:.0f}%")
                 st.metric("⚡ Active", len(df[df["status"]!="Done"]))
         
-        # Compact inspiration panel: stays in the sidebar and never overlays the Kanban board.
-        if "daily_inspiration" not in st.session_state:
-            st.session_state["daily_inspiration"] = random.choice(quotes)
-
-        with st.expander("✨ Daily Inspiration", expanded=False):
-            st.markdown(f"""
-            <div style="
-                box-sizing: border-box;
-                width: 100%;
-                padding: 1rem;
-                border-radius: 12px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                text-align: center;
-                overflow-wrap: anywhere;
-            ">
-                <div style="font-weight: 650; line-height: 1.45;">
-                    {html.escape(st.session_state["daily_inspiration"])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            if st.button("🔄 New inspiration", key="refresh_daily_inspiration", width="stretch"):
-                previous_quote = st.session_state["daily_inspiration"]
-                alternatives = [quote for quote in quotes if quote != previous_quote]
-                st.session_state["daily_inspiration"] = random.choice(alternatives or quotes)
-                st.rerun()
-
         st.markdown("---")
         if st.button("🚪 Logout", width="stretch"):
             st.session_state["logged_in"] = False
@@ -424,6 +434,24 @@ with main_col:
             st.session_state["tasks"] = pd.DataFrame()
             st.rerun()
     
+    # Visible, compact inspiration strip in the normal page flow (never fixed over task cards).
+    if "daily_inspiration" not in st.session_state:
+        st.session_state["daily_inspiration"] = random.choice(quotes)
+
+    quote_col, refresh_col = st.columns([10, 1], vertical_alignment="center")
+    with quote_col:
+        st.markdown(
+            f'<div class="inspiration-strip"><span>✨</span><span class="inspiration-strip-text">'
+            f'{html.escape(st.session_state["daily_inspiration"])}</span></div>',
+            unsafe_allow_html=True,
+        )
+    with refresh_col:
+        if st.button("🔄", key="refresh_daily_inspiration", help="Show a different inspirational quote", width="stretch"):
+            previous_quote = st.session_state["daily_inspiration"]
+            alternatives = [quote for quote in quotes if quote != previous_quote]
+            st.session_state["daily_inspiration"] = random.choice(alternatives or quotes)
+            st.rerun()
+
     # ------------------- Enhanced Tabs -------------------
     tab1, tab2, tab3 = st.tabs(["📋 Kanban Board", "📊 Analytics Dashboard", "📈 Performance Insights"])
 
@@ -488,15 +516,15 @@ with tab1:
                             st.markdown(f"""
                             <div class="task-card {status_class}">
                                 <h4 style="margin: 0; color: {text_color};">{html.escape(str(row['title']))}</h4>
-                                <div style="margin: 0.5rem 0;">
-                                    <span style="background: #34495e; color: white; padding: 0.2rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-right: 0.5rem;">
+                                <div class="task-meta">
+                                    <span class="task-badge" style="background: #34495e; color: white;">
                                         {priority_emoji} P{row['priority']}
                                     </span>
-                                    <span style="background: #3498db; color: white; padding: 0.2rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-right: 0.5rem;">
+                                    <span class="task-badge" style="background: #3498db; color: white;">
                                         🏷️ {task_tag}
                                     </span>
-                                    <span style="background: #9b59b6; color: white; padding: 0.2rem 0.5rem; border-radius: 15px; font-size: 0.8rem;">
-                                        ⏱️ {est_hours}h
+                                    <span class="task-badge" style="background: #9b59b6; color: white;">
+                                        ⏱️ {float(est_hours):g}h
                                     </span>
                                 </div>
                                 <div style="color: {urgency_color}; font-weight: 600; font-size: 0.9rem;">
