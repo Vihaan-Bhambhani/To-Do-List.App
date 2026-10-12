@@ -216,10 +216,11 @@ def login_register():
             submitted = st.form_submit_button("🚀 " + action, width="stretch")
             
             if submitted:
-                if not username.strip() or not password:
+                username = username.strip().lower()
+                if not username or not password:
                     st.warning("⚠️ Please enter both username and password.")
                     return False
-                elif not re.fullmatch(r"[A-Za-z0-9_-]{3,24}", username.strip()):
+                elif not re.fullmatch(r"[A-Za-z0-9_-]{3,24}", username):
                     st.warning("Use a username of 3–24 letters, numbers, underscores, or hyphens.")
                     return False
                 elif action == "Register" and password != confirm_password:
@@ -234,7 +235,7 @@ def login_register():
                         new_user = pd.DataFrame([{"username": username.lower(), "password": hash_password(password)}])
                         df = pd.concat([df, new_user], ignore_index=True)
                         save_users(df)
-                        st.session_state["current_user"] = username.lower()
+                        st.session_state["current_user"] = username
                         st.session_state["logged_in"] = True
                         st.success(f"🎉 Welcome {username}! Registration successful!")
                         st.rerun()
